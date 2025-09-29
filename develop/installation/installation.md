@@ -10,7 +10,7 @@ As a `h3xplorer` user, it is easiest to install using the [conda](https://docs.c
 1. Open the command line (or the VSCode "integrated terminal" in Windows).
 1. Download (a.k.a., clone) the h3xplorer repository: `git clone git@github.com:d-i-duke/h3xplorer.git`
 1. Change into the `h3xplorer` directory: `cd h3xplorer`
-1. Create the h3xplorer conda environment: `conda create -n h3xplorer -c conda-forge -c city-modelling-lab --file requirements/base.txt`
+1. Create the h3xplorer conda environment: `conda create -n h3xplorer -c conda-forge --file requirements/base.txt`
 1. Activate the h3xplorer conda environment: `conda activate h3xplorer`
 1. Install the h3xplorer package into the environment, ignoring dependencies (we have dealt with those when creating the conda environment): `pip install --no-deps .`
 
