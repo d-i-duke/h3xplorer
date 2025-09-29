@@ -1,0 +1,16 @@
+name: Publish
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  
+  
+  docs-stable:
+    permissions:
+      contents: write
+    uses: arup-group/actions-city-modelling-lab/.github/workflows/docs-deploy.yml@main
+    with:
+      deploy_type: update_stable
+      notebook_kernel: h3xplorer

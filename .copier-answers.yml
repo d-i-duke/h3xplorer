@@ -1,0 +1,21 @@
+# Changes here will be overwritten by Copier
+_commit: 4ca1dbf
+_src_path: https://github.com/aptosaurinae/pypackage-template.git
+check_docs_accessibility_in_CI: false
+command_line_interface: true
+create_author_file: true
+create_docker_file: true
+create_jupyter_notebook_directory: true
+email: 234983679+d-i-duke@users.noreply.github.com
+full_name: Dominic Duke
+github_username: d-i-duke
+module_name: h3xplorer
+open_source_license: GPL-v3
+package_name: h3xplorer
+project_short_description: Explore spatial data with hexagons
+project_title: h3xplorer
+repository_name: h3xplorer
+repository_owner: d-i-duke
+upload_aws_image: false
+upload_conda_package: false
+upload_pip_package: false
