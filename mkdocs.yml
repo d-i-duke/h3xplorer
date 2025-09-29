@@ -1,6 +1,7 @@
 site_name: h3xplorer
 nav:
   - Home: index.md
+  - Introduction: introduction.md
   - Installation: installation.md
   - Examples: [] # this will be filled in automatically to include reference to all the notebooks
   - Contributing: contributing.md
