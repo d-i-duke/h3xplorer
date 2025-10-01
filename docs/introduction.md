@@ -8,12 +8,12 @@
 
 If you wanted to take a dataset and plot it spatially as hexagons, it is expected that you'd need to do something like the below to do this without `h3xplorer`:
 
-- Bring your dataset into Python using `geopandas` (`read_file` or equivalent);
-- Use `h3-py` to find all of the relevant hexagons to your datasets spatial extent;
-- Assign the original data to hexagon references. This might be quite involved if you are using polygon data, using area assignment or similar, and requires knowledge of the sizing of the hexagons against your dataset;
-- Get the hexagon extents from `h3-py` and convert them into polygons using `shapely` then group these into a `GeoDataFrame`;
-- Join the hexagon polygons to the dataset;
-- Plot the hexagons.
+1. Bring your dataset into Python using `geopandas` (`read_file` or equivalent).
+1. Use `h3-py` to find all of the relevant hexagons to your datasets spatial extent.
+1. Assign the original data to hexagon references. This might be quite involved if you are using polygon data, using area assignment or similar, and requires knowledge of the sizing of the hexagons against your dataset.
+1. Get the hexagon extents from `h3-py` and convert them into polygons using `shapely` then group these into a `GeoDataFrame`.
+1. Join the hexagon polygons to the dataset.
+1. Plot the hexagons.
 
 This process is full of pitfalls / gotchas, and can be poorly optimised if you don't understand how `h3-py` works on the backend.
 
