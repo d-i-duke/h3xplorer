@@ -43,6 +43,7 @@ cd h3xplorer
 conda create -n h3xplorer -c conda-forge --file requirements/base.txt --file requirements/dev.txt
 conda activate h3xplorer
 pip install --no-deps -e .
+python -m ipykernel install --user --name h3xplorer --display-name "Python 3 (h3xplorer)"
 ```
 
 <!--- --8<-- [end:docs-install-dev] -->
