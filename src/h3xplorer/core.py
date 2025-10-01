@@ -35,7 +35,7 @@ def _import_dataset(
     elif suf == ".ndjson":
         read_func = pl.read_ndjson
     else:
-        raise ValueError(f"File type given not valid (given {suf})")
+        raise ValueError(f"Dataset file type is not valid, given {suf})")
     return read_func(dataset_path, **args)
 
 
