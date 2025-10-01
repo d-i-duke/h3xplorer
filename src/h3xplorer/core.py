@@ -3,14 +3,10 @@
 from pathlib import Path
 
 import geopandas as gpd
-import h3.api.memview_int as h3
 import polars as pl
 
 
-def _import_dataset(
-    dataset_path: str | Path,
-    separator: str = ","
-) -> pl.DataFrame:
+def _import_dataset(dataset_path: str | Path, separator: str = ",") -> pl.DataFrame:
     """Read an xy points file.
 
     Args:
@@ -39,12 +35,7 @@ def _import_dataset(
     return read_func(dataset_path, **args)
 
 
-def _read_xy_dataset(
-    dataset: pl.DataFrame,
-    x: str,
-    y: str,
-    epsg: int,
-) -> pl.DataFrame:
+def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.DataFrame:
     """Reads an xy dataset, converting it to lon/lat points if required.
 
     Args:
@@ -57,6 +48,9 @@ def _read_xy_dataset(
         ValueError: If the 'x' and 'y' columns don't exist in the dataset
     """
     epsg_wgs84 = 4326
+    lat = "lat"
+    lon = "lon"
+
     missing_x = False
     missing_y = False
     if x not in dataset.columns:
@@ -75,15 +69,18 @@ def _read_xy_dataset(
         points_gdf = points_gdf.to_crs(epsg=epsg_wgs84)
         _lon = points_gdf.x.tolist()
         _lat = points_gdf.y.tolist()
-        dataset = dataset.with_columns([pl.Series("lon", _lon), pl.Series("lat", _lat)])
+        dataset = dataset.with_columns([pl.Series(lon, _lon), pl.Series(lat, _lat)])
         dataset = dataset.drop(x, y)
+    else:
+        for input_name, col_name in {x: lon, y: lat}.items():
+            if input_name is not col_name:
+                dataset = dataset.drop(col_name, strict=False)
+                dataset = dataset.rename({input_name: col_name})
     return dataset
 
 
 def _get_hexagon_refs_for_points(
-    df_input: pl.DataFrame,
-    h3_size: int,
-    h3_ref_field: str = "h3_ref",
+    df_input: pl.DataFrame, h3_size: int, h3_ref_field: str = "h3_ref"
 ) -> gpd.GeoDataFrame:
     """Gets the hexagons relevant to a set of point locations.
 
@@ -110,8 +107,7 @@ def _get_hexagon_polygons(h3_refs: set) -> gpd.GeoDataFrame:
 
 
 def _groupby_hexagons(
-    input_gdf: gpd.GeoDataFrame,
-    h3_ref_field: str = "h3_ref"
+    input_gdf: gpd.GeoDataFrame, h3_ref_field: str = "h3_ref"
 ) -> gpd.GeoDataFrame:
     """Groups a dataset by the given reference field.
 
