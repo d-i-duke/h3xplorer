@@ -15,7 +15,7 @@ def _import_dataset(
 
     Args:
         dataset_path: String or path of the dataset.
-        seperator: Separator for CSV file type.
+        separator: Separator for CSV file type.
     """
     if isinstance(dataset_path, str):
         dataset_path = Path(dataset_path)
