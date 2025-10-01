@@ -94,6 +94,10 @@ class TestReadXYDataset:
         df = core._read_xy_dataset(xy_dataset, "x", "y", 27700)
         assert_frame_equal(df, latlon_dataset)
 
+    def test_latlon_dataset_returned_unchanged(self, latlon_dataset):
+        df = core._read_xy_dataset(latlon_dataset, "lon", "lat", 4326)
+        assert_frame_equal(df, latlon_dataset)
+
 
 # if __name__ == "__main__":
 #     xy_dataset().write_csv(Path(__file__).parent / "fixture_data" / "xy.csv")
