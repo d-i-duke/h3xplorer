@@ -24,7 +24,7 @@ This process is full of pitfalls / gotchas, and can be poorly optimised if you d
 In the simplest form you can just do:
 
 ``` shell
-h3x --file my_file.parquet --field "population" --output "C:/projects"
+h3x --file my_file.parquet --x "x" --y "y" --epsg 27700 --field "population" --output "C:/projects"
 ```
 
 which will generate a local html file `C:/projects/my_file_population.html` using the population field for the colour scale. `h3xplorer` will guess at what resolution of hexagons you are likely to want, based on the bounding box of the dataset being used.
@@ -32,7 +32,7 @@ which will generate a local html file `C:/projects/my_file_population.html` usin
 While if you want to specify arguments, you can control the process at a finer level:
 
 ``` shell
-h3x --file my_file.parquet --field "population" --field "households" --cmap "rainbow" --size 8 --output "C:/projects"
+h3x --file my_file.parquet --x "x" --y "y" --epsg 27700 --field "population" --field "households" --cmap "rainbow" --size 8 --output "C:/projects"
 ```
 
 which will generate a local html file `C:/projects/my_file_population_vs_households.html` as a comparison between the population and households fields.

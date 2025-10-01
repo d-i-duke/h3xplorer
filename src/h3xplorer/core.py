@@ -40,27 +40,44 @@ def _import_dataset(
 
 
 def _read_xy_dataset(
-    dataset_path: str | Path,
-    x: str | None = None,
-    y: str | None = None,
-    epsg: int | None = None,
+    dataset: pl.DataFrame,
+    x: str,
+    y: str,
+    epsg: int,
 ) -> pl.DataFrame:
     """Reads an xy dataset, converting it to lon/lat points if required.
 
     Args:
-        dataset_path: Path of file to read.
+        dataset: DataFrame of data.
         x: The x / longitude field. Will try and guess this if not provided.
         y: The y / latitude field. Will try and guess this if not provided.
         epsg: The epsg to read the initial xy points from, if required.
 
     Raises:
-        ValueError: If the points appear not to be in WGS84 (EPSG:4326).
+        ValueError: If the 'x' and 'y' columns don't exist in the dataset
     """
-    if True:
-        raise ValueError(
-            "points given appear to not be EPSG:4326 (WGS84), please provide an EPSG number."
-        )
-    return pl.DataFrame()
+    epsg_wgs84 = 4326
+    missing_x = False
+    missing_y = False
+    if x not in dataset.columns:
+        missing_x = True
+    if y not in dataset.columns:
+        missing_y = True
+    if missing_x or missing_y:
+        raise ValueError("'x' or 'y' columns are not included in the dataset")
+
+    if epsg != epsg_wgs84:
+        _epsg = f"EPSG:{epsg}"
+        _x = dataset.select(x).to_series()
+        _y = dataset.select(y).to_series()
+        points_gdf = gpd.points_from_xy(_x, _y, crs=_epsg)
+        points_gdf.to_crs(epsg=epsg_wgs84)
+        points_gdf = points_gdf.to_crs(epsg=epsg_wgs84)
+        _lon = points_gdf.x.tolist()
+        _lat = points_gdf.y.tolist()
+        dataset = dataset.with_columns([pl.Series("lon", _lon), pl.Series("lat", _lat)])
+        dataset = dataset.drop(x, y)
+    return dataset
 
 
 def _get_hexagon_refs_for_points(
