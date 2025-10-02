@@ -20,7 +20,7 @@ def xy_dataset() -> pl.DataFrame:
 
 @pytest.fixture(scope="module")
 def latlon_dataset() -> pl.DataFrame:
-    # verified co-ords using qgis to transform those in the xy_dataset
+    # verified co-ords using qgis to transform those in the xy_dataset (epsg 27700 -> 4326)
     return pl.DataFrame({
         "id": [1, 2, 3, 4, 5],
         "lon": [-3.448079, -2.001428, -0.494362, -0.128329, -2.001375],
@@ -95,28 +95,39 @@ class TestReadXYDataset:
 
 
 class TestHexagonRefsForPoints:
-    def test_points_generate_expected_size5_hexagons(self, latlon_dataset):
-        dataset, hex_refs = core._get_hexagon_refs_for_points(latlon_dataset, 5)
-        expected_refs = [
+    @pytest.fixture(scope="class")
+    def expected_refs(self):
+        return [
             599424788162674687,
             599424878356987903,
             599423139968974847,
             599423697240981503,
             599424725885648895,
         ]
+
+    def test_points_generate_expected_size5_hexagons_in_df(self, latlon_dataset, expected_refs):
         expected_series = pl.Series(name="h3_ref", values=expected_refs)
-        expected_set = set(expected_refs)
+        dataset, _ = core._get_hexagon_refs_for_points(latlon_dataset, 5)
         assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
+
+    def test_input_df_retains_data(self, latlon_dataset):
+        dataset, _ = core._get_hexagon_refs_for_points(latlon_dataset, 5)
+        assert_frame_equal(dataset.drop("h3_ref"), latlon_dataset)
+
+    def test_points_generate_expected_size5_hexagon_ref_set(self, latlon_dataset, expected_refs):
+        expected_set = set(expected_refs)
+        _, hex_refs = core._get_hexagon_refs_for_points(latlon_dataset, 5)
         assert hex_refs == expected_set
 
-    def test_empty_data_generates_empty_result(self):
-        dataset, hex_refs = core._get_hexagon_refs_for_points(
-            pl.DataFrame({"lat": [], "lon": []}), 5
-        )
-        expected_series = pl.Series(name="h3_ref")
+    def test_empty_data_generates_empty_set(self):
         expected_set = set()
-        assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
+        _, hex_refs = core._get_hexagon_refs_for_points(pl.DataFrame({"lat": [], "lon": []}), 5)
         assert hex_refs == expected_set
+
+    def test_empty_data_generates_empty_df(self):
+        expected_series = pl.Series(name="h3_ref")
+        dataset, _ = core._get_hexagon_refs_for_points(pl.DataFrame({"lat": [], "lon": []}), 5)
+        assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
 
 
 # if __name__ == "__main__":
