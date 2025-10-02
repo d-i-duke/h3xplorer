@@ -4,7 +4,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from polars.testing import assert_frame_equal
+from polars.testing import assert_frame_equal, assert_series_equal
 
 from h3xplorer import core
 
@@ -92,6 +92,29 @@ class TestReadXYDataset:
         df = core._read_xy_dataset(latlon_dataset, "longitude", "latitude", 4326)
         latlon_dataset = latlon_dataset.drop("longitude", "latitude")
         assert_frame_equal(df, latlon_dataset)
+
+
+class TestHexagonRefsForPoints:
+    def test_points_generate_expected_size5_hexagons(self, latlon_dataset):
+        dataset, hex_refs = core._get_hexagon_refs_for_points(latlon_dataset, 5)
+        expected_refs = [
+            599424788162674687,
+            599424878356987903,
+            599423139968974847,
+            599423697240981503,
+            599424725885648895,
+        ]
+        expected_series = pl.Series(name="h3_ref", values=expected_refs)
+        expected_set = set(expected_refs)
+        assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
+        assert hex_refs == expected_set
+
+    def test_empty_data_generates_empty_result(self):
+        dataset, hex_refs = core._get_hexagon_refs_for_points(pl.DataFrame(), 5)
+        expected_series = pl.Series()
+        expected_set = set()
+        assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
+        assert hex_refs == expected_set
 
 
 # if __name__ == "__main__":
