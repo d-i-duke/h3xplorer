@@ -110,8 +110,10 @@ class TestHexagonRefsForPoints:
         assert hex_refs == expected_set
 
     def test_empty_data_generates_empty_result(self):
-        dataset, hex_refs = core._get_hexagon_refs_for_points(pl.DataFrame(), 5)
-        expected_series = pl.Series()
+        dataset, hex_refs = core._get_hexagon_refs_for_points(
+            pl.DataFrame({"lat": [], "lon": []}), 5
+        )
+        expected_series = pl.Series(name="h3_ref")
         expected_set = set()
         assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
         assert hex_refs == expected_set

@@ -1,9 +1,16 @@
 """Main module."""
 
+import logging
 from pathlib import Path
 
 import geopandas as gpd
+import h3.api.numpy_int as h3
 import polars as pl
+
+COL_LON = "lon"
+COL_LAT = "lat"
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
 def _import_dataset(dataset_path: str | Path, separator: str = ",") -> pl.DataFrame:
@@ -12,6 +19,9 @@ def _import_dataset(dataset_path: str | Path, separator: str = ",") -> pl.DataFr
     Args:
         dataset_path: String or path of the dataset.
         separator: Separator for CSV file type.
+
+    Returns:
+        Imported dataset as a dataframe.
     """
     if isinstance(dataset_path, str):
         dataset_path = Path(dataset_path)
@@ -32,6 +42,7 @@ def _import_dataset(dataset_path: str | Path, separator: str = ",") -> pl.DataFr
         read_func = pl.read_ndjson
     else:
         raise ValueError(f"Dataset file type is not valid, given {suf})")
+    logging.info(f"Loaded in dataset: {dataset_path.name}")
     return read_func(dataset_path, **args)
 
 
@@ -45,11 +56,12 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
         epsg: The epsg to read the initial xy points from, if required.
 
     Raises:
-        ValueError: If the 'x' and 'y' columns don't exist in the dataset
+        ValueError: If the 'x' and 'y' columns don't exist in the dataset.
+
+    Returns:
+        Dataframe including "lat" and "lon" fields in EPSG:4326 (WGS84) format.
     """
     epsg_wgs84 = 4326
-    lat = "lat"
-    lon = "lon"
 
     missing_x = False
     missing_y = False
@@ -61,6 +73,7 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
         raise ValueError("'x' or 'y' columns are not included in the dataset")
 
     if epsg != epsg_wgs84:
+        logging.info("Converting points to EPSG:4326")
         _epsg = f"EPSG:{epsg}"
         _x = dataset.select(x).to_series()
         _y = dataset.select(y).to_series()
@@ -69,10 +82,11 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
         points_gdf = points_gdf.to_crs(epsg=epsg_wgs84)
         _lon = points_gdf.x.tolist()
         _lat = points_gdf.y.tolist()
-        dataset = dataset.with_columns([pl.Series(lon, _lon), pl.Series(lat, _lat)])
+        dataset = dataset.with_columns([pl.Series(COL_LON, _lon), pl.Series(COL_LAT, _lat)])
         dataset = dataset.drop(x, y)
+        logging.info("Point conversion complete")
     else:
-        for input_name, col_name in {x: lon, y: lat}.items():
+        for input_name, col_name in {x: COL_LON, y: COL_LAT}.items():
             if input_name is not col_name:
                 dataset = dataset.drop(col_name, strict=False)
                 dataset = dataset.rename({input_name: col_name})
@@ -81,7 +95,7 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
 
 def _get_hexagon_refs_for_points(
     df_input: pl.DataFrame, h3_size: int, h3_ref_field: str = "h3_ref"
-) -> gpd.GeoDataFrame:
+) -> tuple[pl.DataFrame, set]:
     """Gets the hexagons relevant to a set of point locations.
 
     This will both collect a set of hexagon references, and
@@ -94,7 +108,14 @@ def _get_hexagon_refs_for_points(
         h3_ref_field: New field name for assigning h3 reference. If this already
             exists then it will rename the previous field with "_old" suffixed.
     """
-    return gpd.GeoDataFrame()
+    logging.info("Getting hexagon references")
+    lat = df_input.select(COL_LAT).to_series()
+    lon = df_input.select(COL_LON).to_series()
+    refs = [h3.latlng_to_cell(lat[idx], lon[idx], h3_size) for idx in range(len(lat))]
+    df = df_input.clone()
+    df = df.with_columns(pl.Series(h3_ref_field, refs))
+    logging.info("Hexagon references retrieved")
+    return df, set(refs)
 
 
 def _get_hexagon_polygons(h3_refs: set) -> gpd.GeoDataFrame:
