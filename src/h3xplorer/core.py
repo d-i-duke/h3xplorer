@@ -1,4 +1,4 @@
-"""Main module."""
+"""Explore point data as h3 hexagon aggregations."""
 
 import logging
 from pathlib import Path
@@ -6,6 +6,7 @@ from pathlib import Path
 import geopandas as gpd
 import h3.api.numpy_int as h3
 import polars as pl
+from tqdm import tqdm
 
 COL_LON = "lon"
 COL_LAT = "lat"
@@ -90,6 +91,11 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
             if input_name is not col_name:
                 dataset = dataset.drop(col_name, strict=False)
                 dataset = dataset.rename({input_name: col_name})
+
+    # TODO check min/max lat and lon are within typical bounds?
+    # lat = within -90 to +90
+    # lon = within -180 to +180
+
     return dataset
 
 
@@ -107,24 +113,34 @@ def _get_hexagon_refs_for_points(
         h3_size: size of h3 hexagons to use.
         h3_ref_field: New field name for assigning h3 reference. If this already
             exists then it will rename the previous field with "_old" suffixed.
+
+    Returns:
+        Clone of the dataframe with a new h3 reference field for each record, and
+        set of h3 references.
     """
     logging.info("Getting hexagon references")
     lat = df_input.select(COL_LAT).to_series()
     lon = df_input.select(COL_LON).to_series()
-    refs = [h3.latlng_to_cell(lat[idx], lon[idx], h3_size) for idx in range(len(lat))]
+    refs = set()
+    for idx in tqdm(range(len(lat)), "Converting points to h3 references"):
+        refs.add(h3.latlng_to_cell(lat[idx], lon[idx], h3_size))
     df = df_input.clone()
-    df = df.with_columns(pl.Series(h3_ref_field, refs))
+    df = df.with_columns(pl.Series(h3_ref_field, list(refs)))
     logging.info("Hexagon references retrieved")
-    return df, set(refs)
+    return df, refs
 
 
-def _get_hexagon_polygons(h3_refs: set) -> gpd.GeoDataFrame:
+def _get_hexagon_polygons(h3_refs: set | list) -> gpd.GeoDataFrame:
     """Turns a set of h3 references into a geodataframe of polygons.
 
     Args:
         h3_refs: set of h3 references.
     """
-    return gpd.GeoDataFrame()
+    refs = list(h3_refs) if isinstance(h3_refs, set) else h3_refs
+    geoms = []
+    for ref in tqdm(refs, "Converting h3 references to polygons"):
+        geoms.append(h3.cells_to_h3shape([ref]))
+    return gpd.GeoDataFrame({"h3_ref": refs, "geometry": geoms}, crs="EPSG:4326")
 
 
 def _groupby_hexagons(
