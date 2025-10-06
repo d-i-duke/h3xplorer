@@ -4,3 +4,4 @@ ipykernel
 lonboard
 polars
 pyarrow
+tqdm
