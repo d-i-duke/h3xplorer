@@ -42,6 +42,17 @@ def expected_refs() -> set:
     }
 
 
+@pytest.fixture(scope="module")
+def expected_refs_list() -> list:
+    return [
+        599424788162674687,
+        599424878356987903,
+        599423139968974847,
+        599423697240981503,
+        599424725885648895,
+    ]
+
+
 class TestImportDataset:
     @pytest.fixture(scope="class")
     def test_files_path(self):
@@ -137,16 +148,6 @@ class TestHexagonRefsForPoints:
 
 class TestGetHexagonPolygons:
     @pytest.fixture(scope="class")
-    def expected_refs_list(self):
-        return [
-            599424788162674687,
-            599424878356987903,
-            599423139968974847,
-            599423697240981503,
-            599424725885648895,
-        ]
-
-    @pytest.fixture(scope="class")
     def expected_polys(self, expected_refs_list):
         geoms = [
             Polygon([
@@ -212,6 +213,107 @@ class TestGetHexagonPolygons:
     def test_expected_refs_generates_expected_geometries(self, expected_refs_list, expected_polys):
         assert_geodataframe_equal(
             core._get_hexagon_polygons(expected_refs_list), expected_polys, check_less_precise=True
+        )
+
+
+class TestGroupbyHexagons:
+    @pytest.fixture(scope="class")
+    def refs_for_grouping(self, expected_refs_list):
+        return [
+            expected_refs_list[0],
+            expected_refs_list[0],
+            expected_refs_list[1],
+            expected_refs_list[1],
+            expected_refs_list[1],
+        ]
+
+    @pytest.fixture(scope="class")
+    def df_for_grouping(self, refs_for_grouping) -> pl.DataFrame:
+        dummy_pop = pl.Series("population", [100, 200, 250, 250, 400])
+        h3_ref = pl.Series("h3_ref", refs_for_grouping)
+        return pl.DataFrame([h3_ref, dummy_pop])
+
+    @pytest.fixture(scope="class")
+    def expected_refs_grouped(self, expected_refs_list):
+        return [expected_refs_list[0], expected_refs_list[1]]
+
+    @pytest.fixture(scope="class")
+    def expected_pops_summed(self):
+        return [300, 900]
+
+    @pytest.fixture(scope="class")
+    def expected_pops_mean(self):
+        return [150, 300]
+
+    @pytest.fixture(scope="class")
+    def expected_pops_median(self):
+        return [150, 250]
+
+    def test_empty_input_gives_empty_output(self):
+        assert_frame_equal(
+            core._groupby_hexagons(pl.DataFrame({"h3_ref": []})), pl.DataFrame({"h3_ref": []})
+        )
+
+    def test_wrong_h3_column_raises_error(self, df_for_grouping: pl.DataFrame):
+        with pytest.raises(ValueError, match="h3_ref_field*"):
+            core._groupby_hexagons(df_for_grouping, "wrong")
+
+    def test_missing_aggregation_column_raises_error(self, df_for_grouping: pl.DataFrame):
+        with pytest.raises(
+            ValueError, match="some of the aggregations column names are missing from the input_df*"
+        ):
+            core._groupby_hexagons(df_for_grouping, temp={"column": "wrong", "agg": "sum"})
+
+    def test_duplicate_aggregation_column_target_raises_error(self, df_for_grouping: pl.DataFrame):
+        with pytest.raises(
+            ValueError,
+            match="some of the target aggregations column names are duplicates from input_df*",
+        ):
+            core._groupby_hexagons(df_for_grouping, h3_ref={"column": "population", "agg": "sum"})
+
+    def test_no_aggregation_creates_expected_result(self, df_for_grouping, expected_refs_grouped):
+        expected = pl.DataFrame({"h3_ref": expected_refs_grouped})
+        assert_frame_equal(core._groupby_hexagons(df_for_grouping), expected, check_row_order=False)
+
+    def test_simple_aggregation_creates_expected_result(
+        self, df_for_grouping, expected_refs_grouped, expected_pops_summed
+    ):
+        expected = pl.DataFrame({
+            "h3_ref": expected_refs_grouped,
+            "population_sum": expected_pops_summed,
+        })
+        assert_frame_equal(
+            core._groupby_hexagons(
+                df_for_grouping, population_sum={"column": "population", "agg": "sum"}
+            ),
+            expected,
+            check_row_order=False,
+        )
+
+    def test_many_aggregations_creates_expected_result(
+        self,
+        df_for_grouping,
+        expected_refs_grouped,
+        expected_pops_summed,
+        expected_pops_mean,
+        expected_pops_median,
+    ):
+        expected = pl.DataFrame({
+            "h3_ref": expected_refs_grouped,
+            "population_sum": expected_pops_summed,
+            "population_mean": expected_pops_mean,
+            "population_median": expected_pops_median,
+        })
+        assert_frame_equal(
+            core._groupby_hexagons(
+                df_for_grouping,
+                population_sum={"column": "population", "agg": "sum"},
+                population_mean={"column": "population", "agg": "mean"},
+                population_median={"column": "population", "agg": "median"},
+            ),
+            expected,
+            check_row_order=False,
+            check_dtypes=False,
         )
 
 

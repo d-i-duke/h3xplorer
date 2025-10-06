@@ -144,15 +144,58 @@ def _get_hexagon_polygons(h3_refs: set | list) -> gpd.GeoDataFrame:
 
 
 def _groupby_hexagons(
-    input_gdf: gpd.GeoDataFrame, h3_ref_field: str = "h3_ref"
-) -> gpd.GeoDataFrame:
-    """Groups a dataset by the given reference field.
+    input_df: pl.DataFrame, h3_ref_field: str = "h3_ref", **aggregations
+) -> pl.DataFrame:
+    """Groups a dataset by the given reference field and aggregations.
 
     Args:
-        input_gdf: Spatial dataset for grouping.
+        input_df: Dataset for grouping.
         h3_ref_field: Column to group on.
+        **aggregations: kwargs dictionary of the form
+            `"new_col"={"column": "column_name", "agg": "aggregation_type"}`
+            when grouping.
+
+    Returns:
+        grouped dataframe of results, summarised by h3_ref_field.
+
+    Raises:
+        ValueError if the h3_ref_field is not present in the input_df.
+        ValueError if any of the aggregation target columns are already in the input_df.
+        ValueError if any of the aggregation columns are not present in the input_df.
     """
-    return gpd.GeoDataFrame()
+    if h3_ref_field not in input_df.columns:
+        raise ValueError(
+            f"h3_ref_field ({h3_ref_field}) must be in input_df column list ({input_df.columns})"
+        )
+
+    duplicate_cols = []
+    for new_col in aggregations:
+        if new_col in input_df.columns:
+            logging.debug(f"duplicate: {new_col}, {input_df.columns}")
+            duplicate_cols.append(new_col)
+    if len(duplicate_cols) > 0:
+        raise ValueError(
+            f"some of the target aggregations column names are duplicates from input_df ({duplicate_cols})"
+        )
+
+    missing_cols = []
+    for values in aggregations.values():
+        if (col := values["column"]) not in input_df.columns:
+            logging.debug(f"missing: {col}, {input_df.columns}")
+            missing_cols.append(col)
+    if len(missing_cols) > 0:
+        raise ValueError(
+            f"some of the aggregations column names are missing from the input_df ({missing_cols})"
+        )
+
+    logging.info("setting up aggregations:")
+    aggs = {
+        key: getattr(pl.col(values["column"]), values["agg"])()
+        for key, values in aggregations.items()
+    }
+    logging.info(aggs)
+    grouped = input_df.group_by(h3_ref_field).agg(**aggs)
+    return grouped
 
 
 def _join_to_hexagon_polys():
