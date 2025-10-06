@@ -100,6 +100,26 @@ class TestReadXYDataset:
         with pytest.raises(ValueError, match="'x' or 'y' columns are not included in the dataset"):
             core._read_xy_dataset(xy_dataset, "x_value", "y_value", 27700)
 
+    def test_lat_below_range_raises_error(self):
+        input_df = pl.DataFrame({"lat": [-91], "lon": [1]})
+        with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
+            core._read_xy_dataset(input_df, "lon", "lat", 4326)
+
+    def test_lat_above_range_raises_error(self):
+        input_df = pl.DataFrame({"lat": [91], "lon": [1]})
+        with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
+            core._read_xy_dataset(input_df, "lon", "lat", 4326)
+
+    def test_lon_below_range_raises_error(self):
+        input_df = pl.DataFrame({"lat": [1], "lon": [-181]})
+        with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
+            core._read_xy_dataset(input_df, "lon", "lat", 4326)
+
+    def test_lon_above_range_raises_error(self):
+        input_df = pl.DataFrame({"lat": [1], "lon": [-181]})
+        with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
+            core._read_xy_dataset(input_df, "lon", "lat", 4326)
+
     def test_xy_dataset_returned_as_wgs84(self, xy_dataset, latlon_dataset):
         df = core._read_xy_dataset(xy_dataset, "x", "y", 27700)
         assert_frame_equal(df, latlon_dataset)

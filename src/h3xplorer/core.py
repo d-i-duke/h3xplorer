@@ -58,6 +58,8 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
 
     Raises:
         ValueError: If the 'x' and 'y' columns don't exist in the dataset.
+        ValueError: If the lat and lon results are outside standard bounds
+            (-90 to +90, -180 to +180)
 
     Returns:
         Dataframe including "lat" and "lon" fields in EPSG:4326 (WGS84) format.
@@ -72,6 +74,9 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
         missing_y = True
     if missing_x or missing_y:
         raise ValueError("'x' or 'y' columns are not included in the dataset")
+
+    if x == COL_LAT or y == COL_LON:
+        logging.warning("Check lon and lat input col names, lon should be x and lat should be y")
 
     if epsg != epsg_wgs84:
         logging.info("Converting points to EPSG:4326")
@@ -88,13 +93,21 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
         logging.info("Point conversion complete")
     else:
         for input_name, col_name in {x: COL_LON, y: COL_LAT}.items():
+            # TODO: if lat and lon are the wrong way around this will error as it will drop the
+            # lat column as part of the "x" fix
             if input_name is not col_name:
                 dataset = dataset.drop(col_name, strict=False)
                 dataset = dataset.rename({input_name: col_name})
 
-    # TODO check min/max lat and lon are within typical bounds?
-    # lat = within -90 to +90
-    # lon = within -180 to +180
+    if (
+        (dataset.select(COL_LAT).max().to_series().item() > 90)
+        or (dataset.select(COL_LAT).min().to_series().item() < -90)
+        or (dataset.select(COL_LON).max().to_series().item() > 180)
+        or (dataset.select(COL_LON).min().to_series().item() < -180)
+    ):
+        raise ValueError(
+            "lat and lon columns are outside plottable bounds (-90 to 90 for lat, -180 to 180 for lon)"
+        )
 
     return dataset
 
@@ -163,6 +176,9 @@ def _groupby_hexagons(
         ValueError if any of the aggregation target columns are already in the input_df.
         ValueError if any of the aggregation columns are not present in the input_df.
     """
+    col_str = "column"
+    agg_str = "agg"
+
     if h3_ref_field not in input_df.columns:
         raise ValueError(
             f"h3_ref_field ({h3_ref_field}) must be in input_df column list ({input_df.columns})"
@@ -180,7 +196,7 @@ def _groupby_hexagons(
 
     missing_cols = []
     for values in aggregations.values():
-        if (col := values["column"]) not in input_df.columns:
+        if (col := values[col_str]) not in input_df.columns:
             logging.debug(f"missing: {col}, {input_df.columns}")
             missing_cols.append(col)
     if len(missing_cols) > 0:
@@ -190,7 +206,7 @@ def _groupby_hexagons(
 
     logging.info("setting up aggregations:")
     aggs = {
-        key: getattr(pl.col(values["column"]), values["agg"])()
+        key: getattr(pl.col(values[col_str]), values[agg_str])()
         for key, values in aggregations.items()
     }
     logging.info(aggs)
