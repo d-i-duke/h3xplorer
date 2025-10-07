@@ -100,6 +100,14 @@ class TestReadXYDataset:
         with pytest.raises(ValueError, match="'x' or 'y' columns are not included in the dataset"):
             core._read_xy_dataset(xy_dataset, "x_value", "y_value", 27700)
 
+    def test_latlon_are_wrong_way_around_raises_error(self):
+        input_df = pl.DataFrame({"lat": [-91], "lon": [1]})
+        with pytest.raises(
+            ValueError,
+            match="Check lon and lat input col names, lon should be x and lat should be y",
+        ):
+            core._read_xy_dataset(input_df, "lat", "lon", 4326)
+
     def test_lat_below_range_raises_error(self):
         input_df = pl.DataFrame({"lat": [-91], "lon": [1]})
         with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
