@@ -244,7 +244,7 @@ class TestGetHexagonPolygons:
         )
 
 
-class TestGroupbyHexagons:
+class TestGroupbyRefCol:
     @pytest.fixture(scope="class")
     def refs_for_grouping(self, expected_refs_list):
         return [
@@ -279,29 +279,29 @@ class TestGroupbyHexagons:
 
     def test_empty_input_gives_empty_output(self):
         assert_frame_equal(
-            core._groupby_hexagons(pl.DataFrame({"h3_ref": []})), pl.DataFrame({"h3_ref": []})
+            core._groupby_ref_col(pl.DataFrame({"h3_ref": []})), pl.DataFrame({"h3_ref": []})
         )
 
-    def test_wrong_h3_column_raises_error(self, df_for_grouping: pl.DataFrame):
-        with pytest.raises(ValueError, match="h3_ref_field*"):
-            core._groupby_hexagons(df_for_grouping, "wrong")
+    def test_wrong_ref_column_raises_error(self, df_for_grouping: pl.DataFrame):
+        with pytest.raises(ValueError, match="ref_field*"):
+            core._groupby_ref_col(df_for_grouping, "wrong")
 
     def test_missing_aggregation_column_raises_error(self, df_for_grouping: pl.DataFrame):
         with pytest.raises(
             ValueError, match="some of the aggregations column names are missing from the input_df*"
         ):
-            core._groupby_hexagons(df_for_grouping, temp={"column": "wrong", "agg": "sum"})
+            core._groupby_ref_col(df_for_grouping, temp={"column": "wrong", "agg": "sum"})
 
     def test_duplicate_aggregation_column_target_raises_error(self, df_for_grouping: pl.DataFrame):
         with pytest.raises(
             ValueError,
             match="some of the target aggregations column names are duplicates from input_df*",
         ):
-            core._groupby_hexagons(df_for_grouping, h3_ref={"column": "population", "agg": "sum"})
+            core._groupby_ref_col(df_for_grouping, h3_ref={"column": "population", "agg": "sum"})
 
     def test_no_aggregation_creates_expected_result(self, df_for_grouping, expected_refs_grouped):
         expected = pl.DataFrame({"h3_ref": expected_refs_grouped})
-        assert_frame_equal(core._groupby_hexagons(df_for_grouping), expected, check_row_order=False)
+        assert_frame_equal(core._groupby_ref_col(df_for_grouping), expected, check_row_order=False)
 
     def test_simple_aggregation_creates_expected_result(
         self, df_for_grouping, expected_refs_grouped, expected_pops_summed
@@ -311,7 +311,7 @@ class TestGroupbyHexagons:
             "population_sum": expected_pops_summed,
         })
         assert_frame_equal(
-            core._groupby_hexagons(
+            core._groupby_ref_col(
                 df_for_grouping, population_sum={"column": "population", "agg": "sum"}
             ),
             expected,
@@ -333,7 +333,7 @@ class TestGroupbyHexagons:
             "population_median": expected_pops_median,
         })
         assert_frame_equal(
-            core._groupby_hexagons(
+            core._groupby_ref_col(
                 df_for_grouping,
                 population_sum={"column": "population", "agg": "sum"},
                 population_mean={"column": "population", "agg": "mean"},

@@ -156,32 +156,32 @@ def _get_hexagon_polygons(h3_refs: set | list) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame({"h3_ref": refs, "geometry": geoms}, crs="EPSG:4326")
 
 
-def _groupby_hexagons(
-    input_df: pl.DataFrame, h3_ref_field: str = "h3_ref", **aggregations
+def _groupby_ref_col(
+    input_df: pl.DataFrame, ref_field: str = "h3_ref", **aggregations
 ) -> pl.DataFrame:
     """Groups a dataset by the given reference field and aggregations.
 
     Args:
         input_df: Dataset for grouping.
-        h3_ref_field: Column to group on.
+        ref_field: Column to group on.
         **aggregations: kwargs dictionary of the form
             `"new_col"={"column": "column_name", "agg": "aggregation_type"}`
             when grouping.
 
     Returns:
-        grouped dataframe of results, summarised by h3_ref_field.
+        grouped dataframe of results, summarised by ref_field.
 
     Raises:
-        ValueError if the h3_ref_field is not present in the input_df.
+        ValueError if the ref_field is not present in the input_df.
         ValueError if any of the aggregation target columns are already in the input_df.
         ValueError if any of the aggregation columns are not present in the input_df.
     """
     col_str = "column"
     agg_str = "agg"
 
-    if h3_ref_field not in input_df.columns:
+    if ref_field not in input_df.columns:
         raise ValueError(
-            f"h3_ref_field ({h3_ref_field}) must be in input_df column list ({input_df.columns})"
+            f"ref_field ({ref_field}) must be in input_df column list ({input_df.columns})"
         )
 
     duplicate_cols = []
@@ -210,7 +210,7 @@ def _groupby_hexagons(
         for key, values in aggregations.items()
     }
     logging.info(aggs)
-    grouped = input_df.group_by(h3_ref_field).agg(**aggs)
+    grouped = input_df.group_by(ref_field).agg(**aggs)
     return grouped
 
 
