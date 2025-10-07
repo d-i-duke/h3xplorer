@@ -53,6 +53,64 @@ def expected_refs_list() -> list:
     ]
 
 
+@pytest.fixture(scope="module")
+def expected_geoms():
+    return [
+        Polygon([
+            (-3.3757093714879454, 51.69820007993203),
+            (-3.5053436422835813, 51.73272257423428),
+            (-3.6080164502927823, 51.6811903909734),
+            (-3.580861649240846, 51.59519769482759),
+            (-3.451418266847575, 51.5607699427712),
+            (-3.3489389047352387, 51.61224032577989),
+            (-3.3757093714879454, 51.69820007993203),
+        ]),
+        Polygon([
+            (-1.977650500683687, 52.57235895958127),
+            (-1.8731921814750925, 52.621367868727255),
+            (-1.8979033675108699, 52.706431776793714),
+            (-2.027469268593714, 52.74252504465365),
+            (-2.1321444680221098, 52.69345896993032),
+            (-2.1070369270140694, 52.608356977038575),
+            (-1.977650500683687, 52.57235895958127),
+        ]),
+        Polygon([
+            (-0.6808060214522392, 53.45049792645889),
+            (-0.5518632906529836, 53.413041720925044),
+            (-0.4457610158490708, 53.45976141351786),
+            (-0.4683625808633735, 53.54398956917154),
+            (-0.5974718902105141, 53.581541219542665),
+            (-0.7038130846587468, 53.534769084214794),
+            (-0.6808060214522392, 53.45049792645889),
+        ]),
+        Polygon([
+            (0.0542718130165512, 51.506311654843635),
+            (-0.0692940978798558, 51.54399608943081),
+            (-0.1717985446099623, 51.49597969639887),
+            (-0.1505100096980458, 51.41032812299651),
+            (-0.0270925498115125, 51.37274254089537),
+            (0.0751848748771522, 51.42070984556818),
+            (0.0542718130165512, 51.506311654843635),
+        ]),
+        Polygon([
+            (-1.968314509613917, 51.31068650532574),
+            (-2.0703877633842658, 51.26042861171404),
+            (-2.0460074072834455, 51.174313502519816),
+            (-1.9199305507519617, 51.13849732928368),
+            (-1.8180641211005693, 51.1886990552312),
+            (-1.8420676885992824, 51.27477294931256),
+            (-1.968314509613917, 51.31068650532574),
+        ]),
+    ]
+
+
+@pytest.fixture(scope="module")
+def expected_polys(expected_refs_list, expected_geoms):
+    return gpd.GeoDataFrame(
+        {"h3_ref": expected_refs_list}, geometry=expected_geoms, crs="EPSG:4326"
+    )
+
+
 class TestImportDataset:
     @pytest.fixture(scope="class")
     def test_files_path(self):
@@ -175,57 +233,6 @@ class TestHexagonRefsForPoints:
 
 
 class TestGetHexagonPolygons:
-    @pytest.fixture(scope="class")
-    def expected_polys(self, expected_refs_list):
-        geoms = [
-            Polygon([
-                (-3.3757093714879454, 51.69820007993203),
-                (-3.5053436422835813, 51.73272257423428),
-                (-3.6080164502927823, 51.6811903909734),
-                (-3.580861649240846, 51.59519769482759),
-                (-3.451418266847575, 51.5607699427712),
-                (-3.3489389047352387, 51.61224032577989),
-                (-3.3757093714879454, 51.69820007993203),
-            ]),
-            Polygon([
-                (-1.977650500683687, 52.57235895958127),
-                (-1.8731921814750925, 52.621367868727255),
-                (-1.8979033675108699, 52.706431776793714),
-                (-2.027469268593714, 52.74252504465365),
-                (-2.1321444680221098, 52.69345896993032),
-                (-2.1070369270140694, 52.608356977038575),
-                (-1.977650500683687, 52.57235895958127),
-            ]),
-            Polygon([
-                (-0.6808060214522392, 53.45049792645889),
-                (-0.5518632906529836, 53.413041720925044),
-                (-0.4457610158490708, 53.45976141351786),
-                (-0.4683625808633735, 53.54398956917154),
-                (-0.5974718902105141, 53.581541219542665),
-                (-0.7038130846587468, 53.534769084214794),
-                (-0.6808060214522392, 53.45049792645889),
-            ]),
-            Polygon([
-                (0.0542718130165512, 51.506311654843635),
-                (-0.0692940978798558, 51.54399608943081),
-                (-0.1717985446099623, 51.49597969639887),
-                (-0.1505100096980458, 51.41032812299651),
-                (-0.0270925498115125, 51.37274254089537),
-                (0.0751848748771522, 51.42070984556818),
-                (0.0542718130165512, 51.506311654843635),
-            ]),
-            Polygon([
-                (-1.968314509613917, 51.31068650532574),
-                (-2.0703877633842658, 51.26042861171404),
-                (-2.0460074072834455, 51.174313502519816),
-                (-1.9199305507519617, 51.13849732928368),
-                (-1.8180641211005693, 51.1886990552312),
-                (-1.8420676885992824, 51.27477294931256),
-                (-1.968314509613917, 51.31068650532574),
-            ]),
-        ]
-        return gpd.GeoDataFrame({"h3_ref": expected_refs_list}, geometry=geoms, crs="EPSG:4326")
-
     def test_empty_refs_set_generates_empty_df(self):
         assert_geodataframe_equal(
             core._get_hexagon_polygons(set()),
@@ -342,6 +349,41 @@ class TestGroupbyRefCol:
             expected,
             check_row_order=False,
             check_dtypes=False,
+        )
+
+
+class TestJoinPldfToGdf:
+    @pytest.fixture(scope="class")
+    def joinable_dataset(self, expected_refs_list):
+        return pl.DataFrame({"h3_ref": expected_refs_list, "joinfield": [2, 4, 6, 8, 10]})
+
+    @pytest.fixture(scope="class")
+    def joined_gdf(self, expected_geoms, expected_refs_list):
+        return gpd.GeoDataFrame(
+            {"h3_ref": expected_refs_list, "joinfield": [2, 4, 6, 8, 10]},
+            geometry=expected_geoms,
+            crs="EPSG:4326",
+        ).set_index("h3_ref")
+
+    def test_df_missing_ref_col_raises_error(self, latlon_dataset, expected_polys):
+        with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
+            core._join_pldf_to_gdf(latlon_dataset, expected_polys, "h3_ref")
+
+    def test_gdf_missing_ref_col_raises_error(self, latlon_dataset, expected_geoms):
+        gdf = gpd.GeoDataFrame(geometry=expected_geoms, crs="EPSG:4326")
+        with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
+            core._join_pldf_to_gdf(latlon_dataset, gdf, "id")
+
+    def test_df_and_gdf_missing_ref_col_raises_error(self, latlon_dataset, expected_polys):
+        with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
+            core._join_pldf_to_gdf(latlon_dataset, expected_polys, "blah")
+
+    def test_join_data_creates_expected_result(self, joinable_dataset, expected_polys, joined_gdf):
+        assert_geodataframe_equal(
+            core._join_pldf_to_gdf(joinable_dataset, expected_polys),
+            joined_gdf,
+            check_like=True,
+            check_less_precise=True,
         )
 
 

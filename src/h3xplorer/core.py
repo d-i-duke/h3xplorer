@@ -149,6 +149,7 @@ def _get_hexagon_polygons(h3_refs: set | list) -> gpd.GeoDataFrame:
     Args:
         h3_refs: set of h3 references.
     """
+    logging.info("Creating hexagon polygons table")
     refs = list(h3_refs) if isinstance(h3_refs, set) else h3_refs
     geoms = []
     for ref in tqdm(refs, "Converting h3 references to polygons"):
@@ -204,20 +205,42 @@ def _groupby_ref_col(
             f"some of the aggregations column names are missing from the input_df ({missing_cols})"
         )
 
-    logging.info("setting up aggregations:")
     aggs = {
         key: getattr(pl.col(values[col_str]), values[agg_str])()
         for key, values in aggregations.items()
     }
-    logging.info(aggs)
+    logging.debug(aggs)
+    logging.info("aggregating data input to spatial areas")
     grouped = input_df.group_by(ref_field).agg(**aggs)
     return grouped
 
 
-def _join_to_hexagon_polys():
-    """Joins a set of polygons to the relevant dataset."""
-    pass
+def _join_pldf_to_gdf(
+    df: pl.DataFrame, gdf: gpd.GeoDataFrame, ref_col: str = "h3_ref"
+) -> gpd.GeoDataFrame:
+    """Joins a polars dataframe to a geodataframe.
+
+    Args:
+        df: table of data.
+        gdf: spatial data.
+        ref_col: column present in both df and gdf to join on.
+
+    Returns:
+        GeoDataFrame with table of data attached.
+
+    Raises:
+        ValueError if ref_col not in df or gdf
+    """
+    if ref_col not in df.columns or ref_col not in gdf.columns:
+        raise ValueError("ref_col missing in df and/or gdf")
+    df_to_join = df.to_pandas().set_index(ref_col)
+    gdf_to_join = gdf.set_index(ref_col)
+    logging.debug(df_to_join)
+    logging.debug(gdf_to_join)
+    gdf_joined = gdf_to_join.join(df_to_join)
+    logging.debug(gdf_joined)
+    return gdf_joined
 
 
-def _plot_hexagons():
+def _plot_spatial_data():
     pass
