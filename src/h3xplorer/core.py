@@ -134,13 +134,13 @@ def _get_hexagon_refs_for_points(
     logging.info("Getting hexagon references")
     lat = df_input.select(COL_LAT).to_series()
     lon = df_input.select(COL_LON).to_series()
-    refs = set()
+    refs = []
     for idx in tqdm(range(len(lat)), "Converting points to h3 references"):
-        refs.add(h3.latlng_to_cell(lat[idx], lon[idx], h3_size))
+        refs.append(h3.latlng_to_cell(lat[idx], lon[idx], h3_size))
     df = df_input.clone()
-    df = df.with_columns(pl.Series(h3_ref_field, list(refs)))
+    df = df.with_columns(pl.Series(h3_ref_field, refs))
     logging.info("Hexagon references retrieved")
-    return df, refs
+    return df, set(refs)
 
 
 def _get_hexagon_polygons(h3_refs: set | list) -> gpd.GeoDataFrame:

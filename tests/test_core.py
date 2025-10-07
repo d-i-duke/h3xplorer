@@ -16,6 +16,8 @@ from h3xplorer import core
 def xy_dataset() -> pl.DataFrame:
     return pl.DataFrame({
         "id": [1, 2, 3, 4, 5],
+        # TODO: duplicate a point here to make sure that if the same hexagon is generated twice
+        # that the dataframe returned also has the duplicate hex
         "x": [300000, 400000, 500000, 530000, 400000],
         "y": [200000, 300000, 400000, 180000, 150000],
     })
