@@ -3,9 +3,14 @@
 import logging
 from pathlib import Path
 
+import colorcet as cc
 import geopandas as gpd
 import h3.api.numpy_int as h3
+import numpy as np
 import polars as pl
+from lonboard import Map, PolygonLayer, basemap
+from lonboard.colormap import apply_continuous_cmap
+from palettable.palette import Palette
 from tqdm import tqdm
 
 COL_LON = "lon"
@@ -242,5 +247,43 @@ def _join_pldf_to_gdf(
     return gdf_joined
 
 
-def _plot_spatial_data():
-    pass
+def _plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formatting) -> Map:
+    """Creates a lonboard map plotting the given polygon data.
+
+    Args:
+        gdf: Spatial dataset containing only polygons.
+        value_col: value of the column in the
+        **polygon_formatting: Dictionary of PolygonLayer formatting options to their values.
+
+    Returns:
+        lonboard map with the given polygon data plotted.
+    """
+
+    def to_rgb(hex: str) -> list:
+        """Converts a hex string to an RGB list."""
+        h = hex.strip("#")
+        return list(int(h[i : i + 2], 16) for i in (0, 2, 4))
+
+    def to_palette(cmap) -> Palette:
+        """Returns the ColorCet colormap as a palettable Palette."""
+        colors = [to_rgb(item) for item in cmap]
+        return Palette(name="colorcet", map_type="colorcet", colors=colors)
+
+    data_values = gdf.loc[:, value_col]
+    norm_values = data_values / max(abs(data_values.max()), abs(data_values.min()))
+    norm_values = np.array([(value + 1) / 2 for value in norm_values])
+    palette = to_palette(cc.CET_CBD1)
+    fill_colours = apply_continuous_cmap(norm_values, palette, alpha=0.5)
+    line_colours = apply_continuous_cmap(norm_values, palette, alpha=0.8)
+    default_format = {
+        "get_line_width": 5,
+        "line_width_min_pixels": 0.5,
+        "line_width_max_pixels": 5,
+        "get_fill_color": fill_colours,
+        "get_line_color": line_colours,
+    }
+    polygon_formatting_to_apply = default_format | polygon_formatting
+
+    layer = PolygonLayer.from_geopandas(gdf, **polygon_formatting_to_apply)
+    m = Map([layer], basemap_style=basemap.CartoBasemap.DarkMatter)
+    return m

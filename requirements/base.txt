@@ -1,7 +1,9 @@
+colorcet
 geopandas
 h3-py
 ipykernel
 lonboard
+palettable
 polars
 pyarrow
 tqdm
