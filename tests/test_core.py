@@ -12,15 +12,17 @@ from shapely import Polygon
 from h3xplorer import core
 
 
-@pytest.fixture(scope="module")
-def xy_dataset() -> pl.DataFrame:
+def make_xy_dataset() -> pl.DataFrame:
     return pl.DataFrame({
         "id": [1, 2, 3, 4, 5],
-        # TODO: duplicate a point here to make sure that if the same hexagon is generated twice
-        # that the dataframe returned also has the duplicate hex
-        "x": [300000, 400000, 500000, 530000, 400000],
-        "y": [200000, 300000, 400000, 180000, 150000],
+        "x": [300000, 300000, 500000, 530000, 400000],
+        "y": [200000, 200000, 400000, 180000, 150000],
     })
+
+
+@pytest.fixture(scope="module")
+def xy_dataset() -> pl.DataFrame:
+    return make_xy_dataset()
 
 
 @pytest.fixture(scope="module")
@@ -28,31 +30,30 @@ def latlon_dataset() -> pl.DataFrame:
     # verified co-ords using qgis to transform those in the xy_dataset (epsg 27700 -> 4326)
     return pl.DataFrame({
         "id": [1, 2, 3, 4, 5],
-        "lon": [-3.448079, -2.001428, -0.494362, -0.128329, -2.001375],
-        "lat": [51.689821, 52.597808, 53.487243, 51.503992, 51.249166],
+        "lon": [-3.448079, -3.448079, -0.494362, -0.128329, -2.001375],
+        "lat": [51.689821, 51.689821, 53.487243, 51.503992, 51.249166],
     })
 
 
 @pytest.fixture(scope="module")
 def expected_refs() -> set:
-    return {
-        599424788162674687,
-        599424878356987903,
-        599423139968974847,
-        599423697240981503,
-        599424725885648895,
-    }
+    return {599424788162674687, 599423139968974847, 599423697240981503, 599424725885648895}
 
 
 @pytest.fixture(scope="module")
-def expected_refs_list() -> list:
+def expected_refs_list_dupes() -> list:
     return [
         599424788162674687,
-        599424878356987903,
+        599424788162674687,
         599423139968974847,
         599423697240981503,
         599424725885648895,
     ]
+
+
+@pytest.fixture(scope="module")
+def expected_refs_list_nodupes() -> list:
+    return [599424788162674687, 599423139968974847, 599423697240981503, 599424725885648895]
 
 
 @pytest.fixture(scope="module")
@@ -66,15 +67,6 @@ def expected_geoms():
             (-3.451418266847575, 51.5607699427712),
             (-3.3489389047352387, 51.61224032577989),
             (-3.3757093714879454, 51.69820007993203),
-        ]),
-        Polygon([
-            (-1.977650500683687, 52.57235895958127),
-            (-1.8731921814750925, 52.621367868727255),
-            (-1.8979033675108699, 52.706431776793714),
-            (-2.027469268593714, 52.74252504465365),
-            (-2.1321444680221098, 52.69345896993032),
-            (-2.1070369270140694, 52.608356977038575),
-            (-1.977650500683687, 52.57235895958127),
         ]),
         Polygon([
             (-0.6808060214522392, 53.45049792645889),
@@ -107,9 +99,9 @@ def expected_geoms():
 
 
 @pytest.fixture(scope="module")
-def expected_polys(expected_refs_list, expected_geoms):
+def expected_polys(expected_refs_list_nodupes, expected_geoms):
     return gpd.GeoDataFrame(
-        {"h3_ref": expected_refs_list}, geometry=expected_geoms, crs="EPSG:4326"
+        {"h3_ref": expected_refs_list_nodupes}, geometry=expected_geoms, crs="EPSG:4326"
     )
 
 
@@ -208,12 +200,12 @@ class TestReadXYDataset:
 
 
 class TestHexagonRefsForPoints:
-    def test_points_generate_expected_size5_hexagons_in_df(self, latlon_dataset, expected_refs):
-        expected_series = pl.Series(name="h3_ref", values=list(expected_refs))
+    def test_points_generate_expected_size5_hexagons_in_df(
+        self, latlon_dataset, expected_refs_list_dupes
+    ):
+        expected_series = pl.Series(name="h3_ref", values=expected_refs_list_dupes)
         dataset, _ = core._get_hexagon_refs_for_points(latlon_dataset, 5)
-        assert_series_equal(
-            dataset.select("h3_ref").to_series(), expected_series, check_order=False
-        )
+        assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
 
     def test_input_df_retains_data(self, latlon_dataset):
         dataset, _ = core._get_hexagon_refs_for_points(latlon_dataset, 5)
@@ -247,21 +239,25 @@ class TestGetHexagonPolygons:
             gpd.GeoDataFrame({"h3_ref": []}, geometry=[], crs="EPSG:4326"),
         )
 
-    def test_expected_refs_generates_expected_geometries(self, expected_refs_list, expected_polys):
+    def test_expected_refs_generates_expected_geometries(
+        self, expected_refs_list_nodupes, expected_polys
+    ):
         assert_geodataframe_equal(
-            core._get_hexagon_polygons(expected_refs_list), expected_polys, check_less_precise=True
+            core._get_hexagon_polygons(expected_refs_list_nodupes),
+            expected_polys,
+            check_less_precise=True,
         )
 
 
 class TestGroupbyRefCol:
     @pytest.fixture(scope="class")
-    def refs_for_grouping(self, expected_refs_list):
+    def refs_for_grouping(self, expected_refs_list_nodupes):
         return [
-            expected_refs_list[0],
-            expected_refs_list[0],
-            expected_refs_list[1],
-            expected_refs_list[1],
-            expected_refs_list[1],
+            expected_refs_list_nodupes[0],
+            expected_refs_list_nodupes[0],
+            expected_refs_list_nodupes[1],
+            expected_refs_list_nodupes[1],
+            expected_refs_list_nodupes[1],
         ]
 
     @pytest.fixture(scope="class")
@@ -271,8 +267,8 @@ class TestGroupbyRefCol:
         return pl.DataFrame([h3_ref, dummy_pop])
 
     @pytest.fixture(scope="class")
-    def expected_refs_grouped(self, expected_refs_list):
-        return [expected_refs_list[0], expected_refs_list[1]]
+    def expected_refs_grouped(self, expected_refs_list_nodupes):
+        return [expected_refs_list_nodupes[0], expected_refs_list_nodupes[1]]
 
     @pytest.fixture(scope="class")
     def expected_pops_summed(self):
@@ -356,13 +352,13 @@ class TestGroupbyRefCol:
 
 class TestJoinPldfToGdf:
     @pytest.fixture(scope="class")
-    def joinable_dataset(self, expected_refs_list):
-        return pl.DataFrame({"h3_ref": expected_refs_list, "joinfield": [2, 4, 6, 8, 10]})
+    def joinable_dataset(self, expected_refs_list_nodupes):
+        return pl.DataFrame({"h3_ref": expected_refs_list_nodupes, "joinfield": [2, 6, 8, 10]})
 
     @pytest.fixture(scope="class")
-    def joined_gdf(self, expected_geoms, expected_refs_list):
+    def joined_gdf(self, expected_geoms, expected_refs_list_nodupes):
         return gpd.GeoDataFrame(
-            {"h3_ref": expected_refs_list, "joinfield": [2, 4, 6, 8, 10]},
+            {"h3_ref": expected_refs_list_nodupes, "joinfield": [2, 6, 8, 10]},
             geometry=expected_geoms,
             crs="EPSG:4326",
         ).set_index("h3_ref")
@@ -389,9 +385,11 @@ class TestJoinPldfToGdf:
         )
 
 
-# if __name__ == "__main__":
-#     xy_dataset().write_csv(Path(__file__).parent / "fixture_data" / "xy.csv")
-#     xy_dataset().write_csv(Path(__file__).parent / "fixture_data" / "xy_semicolon.csv", separator=";")
-#     xy_dataset().write_parquet(Path(__file__).parent / "fixture_data" / "xy.parquet")
-#     xy_dataset().write_ndjson(Path(__file__).parent / "fixture_data" / "xy.ndjson")
-#     xy_dataset().write_json(Path(__file__).parent / "fixture_data" / "xy.json")
+if __name__ == "__main__":
+    outdir = Path(__file__).parent / "fixture_data"
+    data = make_xy_dataset()
+    data.write_csv(outdir / "xy.csv")
+    data.write_csv(outdir / "xy_semicolon.csv", separator=";")
+    data.write_parquet(outdir / "xy.parquet")
+    data.write_ndjson(outdir / "xy.ndjson")
+    data.write_json(outdir / "xy.json")
