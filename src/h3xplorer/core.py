@@ -10,6 +10,7 @@ import numpy as np
 import polars as pl
 from lonboard import Map, PolygonLayer, basemap
 from lonboard.colormap import apply_continuous_cmap
+from numpy._typing import NDArray
 from palettable.palette import Palette
 from tqdm import tqdm
 
@@ -269,15 +270,19 @@ def _plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formatti
         colors = [to_rgb(item) for item in cmap]
         return Palette(name="colorcet", map_type="colorcet", colors=colors)
 
-    data_values = gdf.loc[:, value_col]
-    norm_values = data_values / max(abs(data_values.max()), abs(data_values.min()))
-    norm_values = np.array([(value + 1) / 2 for value in norm_values])
+    def normalise_values(df, col) -> NDArray:
+        data_values = df.loc[:, col]
+        norm_values = data_values / max(abs(data_values.max()), abs(data_values.min()))
+        norm_values = np.array([(value + 1) / 2 for value in norm_values])
+        return norm_values
+
     palette = to_palette(cc.CET_CBD1)
+    norm_values = normalise_values(gdf, value_col)
     fill_colours = apply_continuous_cmap(norm_values, palette, alpha=0.5)
     line_colours = apply_continuous_cmap(norm_values, palette, alpha=0.8)
     default_format = {
         "get_line_width": 5,
-        "line_width_min_pixels": 0.5,
+        "line_width_min_pixels": 2,
         "line_width_max_pixels": 5,
         "get_fill_color": fill_colours,
         "get_line_color": line_colours,
