@@ -211,3 +211,6 @@ class TestCreatePolygonLayer:
         assert [layer.get_fill_color[num].as_py() for num in range(4)] == [
             [255, 255, 255, 191] for _ in range(4)
         ]
+        assert [layer.get_line_color[num].as_py() for num in range(4)] == [
+            [255, 255, 255, 229] for _ in range(4)
+        ]
