@@ -111,46 +111,46 @@ class TestImportDataset:
         return Path(__file__).parent / "fixture_data"
 
     def test_csv_returns_dataframe(self, test_files_path, xy_dataset):
-        df = core._import_dataset(test_files_path / "xy.csv")
+        df = core.import_dataset(test_files_path / "xy.csv")
         assert_frame_equal(df, xy_dataset)
 
     def test_csv_with_nondefault_separator_returns_dataframe(self, test_files_path, xy_dataset):
-        df = core._import_dataset(test_files_path / "xy_semicolon.csv", separator=";")
+        df = core.import_dataset(test_files_path / "xy_semicolon.csv", separator=";")
         assert_frame_equal(df, xy_dataset)
 
     def test_parquet_returns_dataframe(self, test_files_path, xy_dataset):
-        df = core._import_dataset(test_files_path / "xy.parquet")
+        df = core.import_dataset(test_files_path / "xy.parquet")
         assert_frame_equal(df, xy_dataset)
 
     def test_json_returns_dataframe(self, test_files_path, xy_dataset):
-        df = core._import_dataset(test_files_path / "xy.json")
+        df = core.import_dataset(test_files_path / "xy.json")
         assert_frame_equal(df, xy_dataset)
 
     def test_ndjson_returns_dataframe(self, test_files_path, xy_dataset):
-        df = core._import_dataset(test_files_path / "xy.ndjson")
+        df = core.import_dataset(test_files_path / "xy.ndjson")
         assert_frame_equal(df, xy_dataset)
 
     def test_file_doesnt_exist_raises_error(self, test_files_path):
         with pytest.raises(FileNotFoundError, match="Dataset not found: *"):
-            core._import_dataset(test_files_path / "xy.unknown")
+            core.import_dataset(test_files_path / "xy.unknown")
 
     def test_unknown_extension_raises_error(self, test_files_path):
         with pytest.raises(ValueError, match="Dataset file type is not valid, given *"):
-            core._import_dataset(test_files_path / "xy.other")
+            core.import_dataset(test_files_path / "xy.other")
 
 
 class TestReadXYDataset:
     def test_xy_dataset_missing_x_raises_error(self, xy_dataset):
         with pytest.raises(ValueError, match="'x' or 'y' columns are not included in the dataset"):
-            core._read_xy_dataset(xy_dataset, "x_value", "y", 27700)
+            core.read_xy_dataset(xy_dataset, "x_value", "y", 27700)
 
     def test_xy_dataset_missing_y_raises_error(self, xy_dataset):
         with pytest.raises(ValueError, match="'x' or 'y' columns are not included in the dataset"):
-            core._read_xy_dataset(xy_dataset, "x", "y_value", 27700)
+            core.read_xy_dataset(xy_dataset, "x", "y_value", 27700)
 
     def test_xy_dataset_missing_x_and_y_raises_error(self, xy_dataset):
         with pytest.raises(ValueError, match="'x' or 'y' columns are not included in the dataset"):
-            core._read_xy_dataset(xy_dataset, "x_value", "y_value", 27700)
+            core.read_xy_dataset(xy_dataset, "x_value", "y_value", 27700)
 
     def test_latlon_are_wrong_way_around_raises_error(self):
         input_df = pl.DataFrame({"lat": [-91], "lon": [1]})
@@ -158,34 +158,34 @@ class TestReadXYDataset:
             ValueError,
             match="Check lon and lat input col names, lon should be x and lat should be y",
         ):
-            core._read_xy_dataset(input_df, "lat", "lon", 4326)
+            core.read_xy_dataset(input_df, "lat", "lon", 4326)
 
     def test_lat_below_range_raises_error(self):
         input_df = pl.DataFrame({"lat": [-91], "lon": [1]})
         with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
-            core._read_xy_dataset(input_df, "lon", "lat", 4326)
+            core.read_xy_dataset(input_df, "lon", "lat", 4326)
 
     def test_lat_above_range_raises_error(self):
         input_df = pl.DataFrame({"lat": [91], "lon": [1]})
         with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
-            core._read_xy_dataset(input_df, "lon", "lat", 4326)
+            core.read_xy_dataset(input_df, "lon", "lat", 4326)
 
     def test_lon_below_range_raises_error(self):
         input_df = pl.DataFrame({"lat": [1], "lon": [-181]})
         with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
-            core._read_xy_dataset(input_df, "lon", "lat", 4326)
+            core.read_xy_dataset(input_df, "lon", "lat", 4326)
 
     def test_lon_above_range_raises_error(self):
         input_df = pl.DataFrame({"lat": [1], "lon": [-181]})
         with pytest.raises(ValueError, match="lat and lon columns are outside plottable bounds *"):
-            core._read_xy_dataset(input_df, "lon", "lat", 4326)
+            core.read_xy_dataset(input_df, "lon", "lat", 4326)
 
     def test_xy_dataset_returned_as_wgs84(self, xy_dataset, latlon_dataset):
-        df = core._read_xy_dataset(xy_dataset, "x", "y", 27700)
+        df = core.read_xy_dataset(xy_dataset, "x", "y", 27700)
         assert_frame_equal(df, latlon_dataset)
 
     def test_latlon_dataset_returned_unchanged(self, latlon_dataset):
-        df = core._read_xy_dataset(latlon_dataset, "lon", "lat", 4326)
+        df = core.read_xy_dataset(latlon_dataset, "lon", "lat", 4326)
         assert_frame_equal(df, latlon_dataset)
 
     def test_latlon_dataset_with_alt_col_names_returned_unchanged(
@@ -194,7 +194,7 @@ class TestReadXYDataset:
         latlon_dataset = latlon_dataset.with_columns(
             pl.col("lon").alias("longitude"), pl.col("lat").alias("latitude")
         )
-        df = core._read_xy_dataset(latlon_dataset, "longitude", "latitude", 4326)
+        df = core.read_xy_dataset(latlon_dataset, "longitude", "latitude", 4326)
         latlon_dataset = latlon_dataset.drop("longitude", "latitude")
         assert_frame_equal(df, latlon_dataset)
 
@@ -204,38 +204,38 @@ class TestHexagonRefsForPoints:
         self, latlon_dataset, expected_refs_list_dupes
     ):
         expected_series = pl.Series(name="h3_ref", values=expected_refs_list_dupes)
-        dataset, _ = core._get_hexagon_refs_for_points(latlon_dataset, 5)
+        dataset, _ = core.get_hexagon_refs_for_points(latlon_dataset, 5)
         assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
 
     def test_input_df_retains_data(self, latlon_dataset):
-        dataset, _ = core._get_hexagon_refs_for_points(latlon_dataset, 5)
+        dataset, _ = core.get_hexagon_refs_for_points(latlon_dataset, 5)
         assert_frame_equal(dataset.drop("h3_ref"), latlon_dataset, check_row_order=False)
 
     def test_points_generate_expected_size5_hexagon_ref_set(self, latlon_dataset, expected_refs):
-        _, hex_refs = core._get_hexagon_refs_for_points(latlon_dataset, 5)
+        _, hex_refs = core.get_hexagon_refs_for_points(latlon_dataset, 5)
         assert hex_refs == expected_refs
 
     def test_empty_data_generates_empty_set(self):
         expected = set()
-        _, hex_refs = core._get_hexagon_refs_for_points(pl.DataFrame({"lat": [], "lon": []}), 5)
+        _, hex_refs = core.get_hexagon_refs_for_points(pl.DataFrame({"lat": [], "lon": []}), 5)
         assert hex_refs == expected
 
     def test_empty_data_generates_empty_df(self):
         expected_series = pl.Series(name="h3_ref")
-        dataset, _ = core._get_hexagon_refs_for_points(pl.DataFrame({"lat": [], "lon": []}), 5)
+        dataset, _ = core.get_hexagon_refs_for_points(pl.DataFrame({"lat": [], "lon": []}), 5)
         assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
 
 
 class TestGetHexagonPolygons:
     def test_empty_refs_set_generates_empty_df(self):
         assert_geodataframe_equal(
-            core._get_hexagon_polygons(set()),
+            core.get_hexagon_polygons(set()),
             gpd.GeoDataFrame({"h3_ref": []}, geometry=[], crs="EPSG:4326"),
         )
 
     def test_empty_refs_list_generates_empty_df(self):
         assert_geodataframe_equal(
-            core._get_hexagon_polygons(list()),
+            core.get_hexagon_polygons(list()),
             gpd.GeoDataFrame({"h3_ref": []}, geometry=[], crs="EPSG:4326"),
         )
 
@@ -243,7 +243,7 @@ class TestGetHexagonPolygons:
         self, expected_refs_list_nodupes, expected_polys
     ):
         assert_geodataframe_equal(
-            core._get_hexagon_polygons(expected_refs_list_nodupes),
+            core.get_hexagon_polygons(expected_refs_list_nodupes),
             expected_polys,
             check_less_precise=True,
         )
@@ -284,29 +284,29 @@ class TestGroupbyRefCol:
 
     def test_empty_input_gives_empty_output(self):
         assert_frame_equal(
-            core._groupby_ref_col(pl.DataFrame({"h3_ref": []})), pl.DataFrame({"h3_ref": []})
+            core.groupby_ref_col(pl.DataFrame({"h3_ref": []})), pl.DataFrame({"h3_ref": []})
         )
 
     def test_wrong_ref_column_raises_error(self, df_for_grouping: pl.DataFrame):
         with pytest.raises(ValueError, match="ref_field*"):
-            core._groupby_ref_col(df_for_grouping, "wrong")
+            core.groupby_ref_col(df_for_grouping, "wrong")
 
     def test_missing_aggregation_column_raises_error(self, df_for_grouping: pl.DataFrame):
         with pytest.raises(
             ValueError, match="some of the aggregations column names are missing from the input_df*"
         ):
-            core._groupby_ref_col(df_for_grouping, temp={"column": "wrong", "agg": "sum"})
+            core.groupby_ref_col(df_for_grouping, temp={"column": "wrong", "agg": "sum"})
 
     def test_duplicate_aggregation_column_target_raises_error(self, df_for_grouping: pl.DataFrame):
         with pytest.raises(
             ValueError,
             match="some of the target aggregations column names are duplicates from input_df*",
         ):
-            core._groupby_ref_col(df_for_grouping, h3_ref={"column": "population", "agg": "sum"})
+            core.groupby_ref_col(df_for_grouping, h3_ref={"column": "population", "agg": "sum"})
 
     def test_no_aggregation_creates_expected_result(self, df_for_grouping, expected_refs_grouped):
         expected = pl.DataFrame({"h3_ref": expected_refs_grouped})
-        assert_frame_equal(core._groupby_ref_col(df_for_grouping), expected, check_row_order=False)
+        assert_frame_equal(core.groupby_ref_col(df_for_grouping), expected, check_row_order=False)
 
     def test_simple_aggregation_creates_expected_result(
         self, df_for_grouping, expected_refs_grouped, expected_pops_summed
@@ -316,7 +316,7 @@ class TestGroupbyRefCol:
             "population_sum": expected_pops_summed,
         })
         assert_frame_equal(
-            core._groupby_ref_col(
+            core.groupby_ref_col(
                 df_for_grouping, population_sum={"column": "population", "agg": "sum"}
             ),
             expected,
@@ -338,7 +338,7 @@ class TestGroupbyRefCol:
             "population_median": expected_pops_median,
         })
         assert_frame_equal(
-            core._groupby_ref_col(
+            core.groupby_ref_col(
                 df_for_grouping,
                 population_sum={"column": "population", "agg": "sum"},
                 population_mean={"column": "population", "agg": "mean"},
@@ -365,20 +365,20 @@ class TestJoinPldfToGdf:
 
     def test_df_missing_ref_col_raises_error(self, latlon_dataset, expected_polys):
         with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
-            core._join_pldf_to_gdf(latlon_dataset, expected_polys, "h3_ref")
+            core.join_pldf_to_gdf(latlon_dataset, expected_polys, "h3_ref")
 
     def test_gdf_missing_ref_col_raises_error(self, latlon_dataset, expected_geoms):
         gdf = gpd.GeoDataFrame(geometry=expected_geoms, crs="EPSG:4326")
         with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
-            core._join_pldf_to_gdf(latlon_dataset, gdf, "id")
+            core.join_pldf_to_gdf(latlon_dataset, gdf, "id")
 
     def test_df_and_gdf_missing_ref_col_raises_error(self, latlon_dataset, expected_polys):
         with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
-            core._join_pldf_to_gdf(latlon_dataset, expected_polys, "blah")
+            core.join_pldf_to_gdf(latlon_dataset, expected_polys, "blah")
 
     def test_join_data_creates_expected_result(self, joinable_dataset, expected_polys, joined_gdf):
         assert_geodataframe_equal(
-            core._join_pldf_to_gdf(joinable_dataset, expected_polys),
+            core.join_pldf_to_gdf(joinable_dataset, expected_polys),
             joined_gdf,
             check_like=True,
             check_less_precise=True,

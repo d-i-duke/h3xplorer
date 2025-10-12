@@ -20,7 +20,7 @@ COL_LAT = "lat"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
-def _import_dataset(dataset_path: str | Path, separator: str = ",") -> pl.DataFrame:
+def import_dataset(dataset_path: str | Path, separator: str = ",") -> pl.DataFrame:
     """Read an xy points file.
 
     Args:
@@ -53,7 +53,7 @@ def _import_dataset(dataset_path: str | Path, separator: str = ",") -> pl.DataFr
     return read_func(dataset_path, **args)
 
 
-def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.DataFrame:
+def read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.DataFrame:
     """Reads an xy dataset, converting it to lon/lat points if required.
 
     Args:
@@ -118,7 +118,7 @@ def _read_xy_dataset(dataset: pl.DataFrame, x: str, y: str, epsg: int) -> pl.Dat
     return dataset
 
 
-def _get_hexagon_refs_for_points(
+def get_hexagon_refs_for_points(
     df_input: pl.DataFrame, h3_size: int, h3_ref_field: str = "h3_ref"
 ) -> tuple[pl.DataFrame, set]:
     """Gets the hexagons relevant to a set of point locations.
@@ -149,7 +149,7 @@ def _get_hexagon_refs_for_points(
     return df, set(refs)
 
 
-def _get_hexagon_polygons(h3_refs: set | list) -> gpd.GeoDataFrame:
+def get_hexagon_polygons(h3_refs: set | list) -> gpd.GeoDataFrame:
     """Turns a set of h3 references into a geodataframe of polygons.
 
     Args:
@@ -163,7 +163,7 @@ def _get_hexagon_polygons(h3_refs: set | list) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame({"h3_ref": refs, "geometry": geoms}, crs="EPSG:4326")
 
 
-def _groupby_ref_col(
+def groupby_ref_col(
     input_df: pl.DataFrame, ref_field: str = "h3_ref", **aggregations
 ) -> pl.DataFrame:
     """Groups a dataset by the given reference field and aggregations.
@@ -221,7 +221,7 @@ def _groupby_ref_col(
     return grouped
 
 
-def _join_pldf_to_gdf(
+def join_pldf_to_gdf(
     df: pl.DataFrame, gdf: gpd.GeoDataFrame, ref_col: str = "h3_ref"
 ) -> gpd.GeoDataFrame:
     """Joins a polars dataframe to a geodataframe.
@@ -248,7 +248,7 @@ def _join_pldf_to_gdf(
     return gdf_joined
 
 
-def _plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formatting) -> Map:
+def plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formatting) -> Map:
     """Creates a lonboard map plotting the given polygon data.
 
     Args:
