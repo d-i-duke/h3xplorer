@@ -11,8 +11,19 @@ from numpy._typing import NDArray
 from palettable.palette import Palette
 
 
-def to_rgb(hex: str) -> list:
-    """Converts a hex string to an RGB list."""
+def to_rgb(hex: str) -> list[int]:
+    """Converts a hex string to an RGB list.
+
+    Args:
+        hex: string representation of a hex number.
+
+    Raises:
+        ValueError if the string is not 6 characters long (after stripping '#' characters).
+        ValueError if the string contains any non 0-9, a-f characters.
+
+    Returns:
+        list of Red, Green, Blue numbers each between 0 and 255.
+    """
     h = hex.strip("#")
     if len(h) != 6:
         raise ValueError("Hex string must be 6 active characters in length (ignoring '#')")
