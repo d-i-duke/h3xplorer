@@ -46,7 +46,9 @@ def colorcet_to_palette(cmap: list[str]) -> Palette:
     return Palette(name="colorcet", map_type="colorcet", colors=colors)
 
 
-def normalise_values_diverging(data_values: pd.Series) -> NDArray:
+def normalise_values_diverging(
+    data_values: pd.Series, max_threshold: float | int | None = None
+) -> NDArray:
     """Normalises a set of values into a 0-1 range.
 
     This will convert anything > 0 into the 0.5-1.0 range, and <0 into the 0-0.5 range,
@@ -54,8 +56,16 @@ def normalise_values_diverging(data_values: pd.Series) -> NDArray:
 
     Args:
         data_values: A series of numerical values.
+        max_threshold: A value to set max/min at in the new normalised set of values. This can
+            make values in the return NDArray be below 0 / above 1.
+
+    Returns:
+        A numpy NDArray of values between 0 and 1.
     """
-    norm_values = data_values / max(abs(data_values.max()), abs(data_values.min()))
+    if max_threshold is None:
+        norm_values = data_values / max(abs(data_values.max()), abs(data_values.min()))
+    else:
+        norm_values = data_values / max_threshold
     norm_values = np.array([(value + 1) / 2 for value in norm_values])
     return norm_values
 
