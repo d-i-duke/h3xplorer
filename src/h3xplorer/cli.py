@@ -7,6 +7,5 @@ import click
 @click.command()
 def cli(args=None):
     """Console script for h3xplorer."""
-    click.echo("Replace this message by putting your code into h3xplorer.cli.cli")
-    click.echo("See click documentation at https://click.palletsprojects.com/")
+    click.echo("Welcome to h3xplorer, a hexagon-based spatial data exploration package.")
     return 0
