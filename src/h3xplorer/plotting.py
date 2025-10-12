@@ -33,7 +33,7 @@ def to_rgb(hex: str) -> list[int]:
     return list(int(h[i : i + 2], 16) for i in (0, 2, 4))
 
 
-def to_palette(cmap: list[str]) -> Palette:
+def colorcet_to_palette(cmap: list[str]) -> Palette:
     """Returns the ColorCet colormap as a palettable Palette.
 
     Args:
@@ -71,7 +71,7 @@ def plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formattin
     Returns:
         lonboard map with the given polygon data plotted.
     """
-    palette = to_palette(cc.CET_CBD1)
+    palette = colorcet_to_palette(cc.CET_CBD1)
     data_values = gdf.loc[:, value_col]
     norm_values = normalise_values_diverging(data_values)
     fill_colours = apply_continuous_cmap(norm_values, palette, alpha=0.75)
