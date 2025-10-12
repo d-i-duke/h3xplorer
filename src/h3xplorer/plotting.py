@@ -5,6 +5,7 @@ import re
 import colorcet as cc
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from lonboard import Map, PolygonLayer, basemap
 from lonboard.colormap import apply_continuous_cmap
 from numpy._typing import NDArray
@@ -38,9 +39,15 @@ def to_palette(cmap) -> Palette:
     return Palette(name="colorcet", map_type="colorcet", colors=colors)
 
 
-def normalise_values(df, col) -> NDArray:
-    """Normalises a set of values into a 0-1 range."""
-    data_values = df.loc[:, col]
+def normalise_values_diverging(data_values: pd.Series) -> NDArray:
+    """Normalises a set of values into a 0-1 range.
+
+    This will convert anything > 0 into the 0.5-1.0 range, and <0 into the 0-0.5 range,
+    which allows usage of diverging colourschemes.
+
+    Args:
+        data_values: A series of numerical values.
+    """
     norm_values = data_values / max(abs(data_values.max()), abs(data_values.min()))
     norm_values = np.array([(value + 1) / 2 for value in norm_values])
     return norm_values
@@ -58,7 +65,8 @@ def plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formattin
         lonboard map with the given polygon data plotted.
     """
     palette = to_palette(cc.CET_CBD1)
-    norm_values = normalise_values(gdf, value_col)
+    data_values = gdf.loc[:, value_col]
+    norm_values = normalise_values_diverging(data_values)
     fill_colours = apply_continuous_cmap(norm_values, palette, alpha=0.75)
     line_colours = apply_continuous_cmap(norm_values, palette, alpha=0.9)
     default_format = {
