@@ -3,16 +3,12 @@
 import logging
 from pathlib import Path
 
-import colorcet as cc
 import geopandas as gpd
 import h3.api.numpy_int as h3
-import numpy as np
 import polars as pl
-from lonboard import Map, PolygonLayer, basemap
-from lonboard.colormap import apply_continuous_cmap
-from numpy._typing import NDArray
-from palettable.palette import Palette
 from tqdm import tqdm
+
+import h3xplorer.plotting
 
 COL_LON = "lon"
 COL_LAT = "lat"
@@ -248,52 +244,6 @@ def join_pldf_to_gdf(
     return gdf_joined
 
 
-def plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formatting) -> Map:
-    """Creates a lonboard map plotting the given polygon data.
-
-    Args:
-        gdf: Spatial dataset containing only polygons.
-        value_col: value of the column in the
-        **polygon_formatting: Dictionary of PolygonLayer formatting options to their values.
-
-    Returns:
-        lonboard map with the given polygon data plotted.
-    """
-
-    def to_rgb(hex: str) -> list:
-        """Converts a hex string to an RGB list."""
-        h = hex.strip("#")
-        return list(int(h[i : i + 2], 16) for i in (0, 2, 4))
-
-    def to_palette(cmap) -> Palette:
-        """Returns the ColorCet colormap as a palettable Palette."""
-        colors = [to_rgb(item) for item in cmap]
-        return Palette(name="colorcet", map_type="colorcet", colors=colors)
-
-    def normalise_values(df, col) -> NDArray:
-        data_values = df.loc[:, col]
-        norm_values = data_values / max(abs(data_values.max()), abs(data_values.min()))
-        norm_values = np.array([(value + 1) / 2 for value in norm_values])
-        return norm_values
-
-    palette = to_palette(cc.CET_CBD1)
-    norm_values = normalise_values(gdf, value_col)
-    fill_colours = apply_continuous_cmap(norm_values, palette, alpha=0.75)
-    line_colours = apply_continuous_cmap(norm_values, palette, alpha=0.9)
-    default_format = {
-        "get_line_width": 5,
-        "line_width_min_pixels": 2,
-        "line_width_max_pixels": 5,
-        "get_fill_color": fill_colours,
-        "get_line_color": line_colours,
-    }
-    polygon_formatting_to_apply = default_format | polygon_formatting
-
-    layer = PolygonLayer.from_geopandas(gdf, **polygon_formatting_to_apply)
-    m = Map([layer], basemap_style=basemap.CartoBasemap.DarkMatter)
-    return m
-
-
 def xy_plot(
     data_file: Path | pl.DataFrame,
     x_field: str,
@@ -313,7 +263,7 @@ def xy_plot(
     aggregations = {ref_field: {"column": agg_field, "agg": agg_type}}
     df_agg = groupby_ref_col(df_hex_refs, ref_field="h3_ref", **aggregations)
     gdf = join_pldf_to_gdf(df_agg, hexes)
-    plot = plot_polygon_data(gdf, ref_field)
+    plot = h3xplorer.plotting.plot_polygon_data(gdf, ref_field)
     if outpath is not None:
         plot.to_html(outpath, title=outpath.stem)
     return plot
