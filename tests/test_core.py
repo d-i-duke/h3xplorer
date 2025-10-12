@@ -1,4 +1,4 @@
-"""Tests for `h3xplorer` package."""
+"""Tests for `h3xplorer` core."""
 
 from pathlib import Path
 
