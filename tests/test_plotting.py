@@ -173,7 +173,7 @@ class TestCreatePolygonLayer:
             default_layer.get_line_color[num].as_py() for num in range(4)
         ] == default_line_colors
 
-    def test_line_width_overwrite_creates_overwritten_format(
+    def test_custom_overwrite_formatting_creates_overwritten_format(
         self, gdf, default_fill_colors, default_line_colors
     ):
         test_num = 100
@@ -184,7 +184,7 @@ class TestCreatePolygonLayer:
         assert [layer.get_fill_color[num].as_py() for num in range(4)] == default_fill_colors
         assert [layer.get_line_color[num].as_py() for num in range(4)] == default_line_colors
 
-    def test_elevation_creates_expected_formatting(
+    def test_custom_new_formatting_creates_addiitonal_formatting(
         self, gdf, default_fill_colors, default_line_colors
     ):
         test_settings = {"get_elevation": np.array([1, 1, 10, 20]), "extruded": True}
