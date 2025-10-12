@@ -132,7 +132,7 @@ authors = [
 maintainers = []
 description = "Explore spatial data with hexagons"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 keywords = ["h3xplorer", "arup"]
 license = { text = "GPLv3" }
 dynamic = ["dependencies", "optional-dependencies", "version"]
