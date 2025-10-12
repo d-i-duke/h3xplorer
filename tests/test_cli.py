@@ -10,7 +10,7 @@ def test_command_line_interface():
     runner = CliRunner()
     result = runner.invoke(cli.cli)
     assert result.exit_code == 0
-    assert "h3xplorer.cli.cli" in result.output
+    assert "Welcome to h3xplorer" in result.output
     help_result = runner.invoke(cli.cli, ["--help"])
     assert help_result.exit_code == 0
     assert (
