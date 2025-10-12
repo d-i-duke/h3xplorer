@@ -38,7 +38,30 @@ class TestToRGB:
 
 
 class TestToPalette:
-    pass
+    @pytest.fixture(scope="class")
+    def cmap_hex(self):
+        return ["#000000", "#FFFFFF"]
+
+    @pytest.fixture(scope="class")
+    def name(self):
+        return "colorcet"
+
+    def test_typical_cmap_creates_expected_name(self, cmap_hex, name):
+        result = plotting.to_palette(cmap_hex)
+        assert result.name == name
+
+    def test_typical_cmap_creates_expected_maptype(self, cmap_hex, name):
+        result = plotting.to_palette(cmap_hex)
+        assert result.type == name
+
+    def test_typical_cmap_creates_expected_hex_colors(self, cmap_hex):
+        result = plotting.to_palette(cmap_hex)
+        assert result.hex_colors == cmap_hex
+
+    def test_typical_cmap_creates_expected_mpl_colors(self, cmap_hex):
+        cmap_rgb = [(0, 0, 0), (1, 1, 1)]
+        result = plotting.to_palette(cmap_hex)
+        assert result.mpl_colors == cmap_rgb
 
 
 class TestNormaliseValues:
