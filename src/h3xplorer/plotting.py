@@ -1,5 +1,7 @@
 """Contains functions for plotting data."""
 
+import re
+
 import colorcet as cc
 import geopandas as gpd
 import numpy as np
@@ -12,6 +14,10 @@ from palettable.palette import Palette
 def to_rgb(hex: str) -> list:
     """Converts a hex string to an RGB list."""
     h = hex.strip("#")
+    if len(h) != 6:
+        raise ValueError("Hex string must be 6 active characters in length (ignoring '#')")
+    if not bool(re.fullmatch(r"[0-9a-fA-F]+", h)):
+        raise ValueError("Hex string must only include 0-9 and a-f characters")
     return list(int(h[i : i + 2], 16) for i in (0, 2, 4))
 
 
