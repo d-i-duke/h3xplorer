@@ -1,5 +1,6 @@
 """Contains functions for plotting data."""
 
+import logging
 import re
 
 import colorcet as cc
@@ -10,6 +11,8 @@ from lonboard import PolygonLayer
 from lonboard.colormap import apply_continuous_cmap
 from numpy._typing import NDArray
 from palettable.palette import Palette
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
 def to_rgb(hex: str) -> list[int]:
@@ -96,6 +99,7 @@ def create_polygon_layer(
     Returns:
         lonboard-format polygon layer with the given formatting applied.
     """
+    logging.info(f"Creating polygon layer for {value_col}")
     cmap = cc.CET_CBD1 if cmap is None else cmap
     palette = colorcet_to_palette(cmap)
     data_values = gdf.loc[:, value_col]
