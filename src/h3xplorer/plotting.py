@@ -96,7 +96,7 @@ def create_polygon_layer(
     Returns:
         lonboard-format polygon layer with the given formatting applied.
     """
-    cmap = cc.CET_CBL1 if cmap is None else cmap
+    cmap = cc.CET_CBD1 if cmap is None else cmap
     palette = colorcet_to_palette(cmap)
     data_values = gdf.loc[:, value_col]
     norm_values = normalise_values_diverging(data_values, max_threshold)

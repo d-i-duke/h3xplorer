@@ -12,8 +12,13 @@ from h3xplorer import plotting
 
 
 @pytest.fixture(scope="module")
-def data_series():
-    return pd.Series([-5, 0, 5, 10])
+def data_list():
+    return [-5, 0, 5, 10]
+
+
+@pytest.fixture(scope="module")
+def data_series(data_list):
+    return pd.Series(data_list)
 
 
 class TestToRGB:
@@ -118,23 +123,91 @@ class TestCreatePolygonLayer:
     def default_layer(self, gdf):
         return plotting.create_polygon_layer(gdf, "data")
 
-    def test_default_settings_creates_expected_data_type(self, default_layer: PolygonLayer):
+    @pytest.fixture(scope="class")
+    def default_fill_colors(self):
+        return [
+            [168, 190, 248, 191],
+            [237, 236, 236, 191],
+            [209, 189, 131, 191],
+            [167, 143, 8, 191],
+        ]
+
+    @pytest.fixture(scope="class")
+    def default_line_colors(self):
+        return [
+            [168, 190, 248, 229],
+            [237, 236, 236, 229],
+            [209, 189, 131, 229],
+            [167, 143, 8, 229],
+        ]
+
+    def test_default_settings_creates_expected_data_type(self, default_layer):
         assert isinstance(default_layer, PolygonLayer)
 
-    def test_default_settings_create_expected_table_structure(self, default_layer: PolygonLayer):
+    def test_default_settings_create_expected_table_structure(self, default_layer):
         table = default_layer.table
         assert table.column_names == ["data", "geometry"]
         assert table.shape == (4, 2)
 
-    def test_default_settings_creates_expected_data_in_table(self, default_layer: PolygonLayer):
+    def test_default_settings_creates_expected_data_in_table(self, default_layer, data_list):
         table = default_layer.table
-        assert [table[0][num].as_py() for num in range(4)] == [-5, 0, 5, 10]
+        assert [table[0][num].as_py() for num in range(4)] == data_list
 
-    def test_default_settings_creates_expected_geoms_in_table(
-        self, default_layer: PolygonLayer, poly_coords
-    ):
+    def test_default_settings_creates_expected_geoms_in_table(self, default_layer, poly_coords):
         table = default_layer.table
         assert [table[1][num].as_py() for num in range(4)] == [
             [[[coord for coord in coord_tuple] for coord_tuple in coord_list]]
             for coord_list in poly_coords
+        ]
+
+    def test_default_settings_creates_expected_formatting(
+        self, default_layer, default_fill_colors, default_line_colors
+    ):
+        assert default_layer.get_line_width == 5
+        assert default_layer.line_width_min_pixels == 2
+        assert default_layer.line_width_max_pixels == 5
+        assert [
+            default_layer.get_fill_color[num].as_py() for num in range(4)
+        ] == default_fill_colors
+        assert [
+            default_layer.get_line_color[num].as_py() for num in range(4)
+        ] == default_line_colors
+
+    def test_line_width_overwrite_creates_overwritten_format(
+        self, gdf, default_fill_colors, default_line_colors
+    ):
+        test_num = 100
+        layer = plotting.create_polygon_layer(gdf, "data", get_line_width=test_num)
+        assert layer.get_line_width == test_num
+        assert layer.line_width_min_pixels == 2
+        assert layer.line_width_max_pixels == 5
+        assert [layer.get_fill_color[num].as_py() for num in range(4)] == default_fill_colors
+        assert [layer.get_line_color[num].as_py() for num in range(4)] == default_line_colors
+
+    def test_elevation_creates_expected_formatting(
+        self, gdf, default_fill_colors, default_line_colors
+    ):
+        test_settings = {"get_elevation": np.array([1, 1, 10, 20]), "extruded": True}
+        layer = plotting.create_polygon_layer(gdf, "data", **test_settings)
+        assert layer.get_line_width == 5
+        assert layer.line_width_min_pixels == 2
+        assert layer.line_width_max_pixels == 5
+        assert [layer.get_fill_color[num].as_py() for num in range(4)] == default_fill_colors
+        assert [layer.get_line_color[num].as_py() for num in range(4)] == default_line_colors
+        assert_array_equal(layer.get_elevation, test_settings["get_elevation"])
+        assert layer.extruded == test_settings["extruded"]
+
+    def test_max_threshold_creates_expected_fill_colors(self, gdf):
+        layer = plotting.create_polygon_layer(gdf, "data", max_threshold=20)
+        assert [layer.get_fill_color[num].as_py() for num in range(4)] == [
+            [206, 215, 244, 191],
+            [237, 236, 236, 191],
+            [226, 214, 184, 191],
+            [209, 189, 131, 191],
+        ]
+
+    def test_custom_cmap_creates_expected_colors(self, gdf):
+        layer = plotting.create_polygon_layer(gdf, "data", cmap=["#ffffff", "#ffffff"])
+        assert [layer.get_fill_color[num].as_py() for num in range(4)] == [
+            [255, 255, 255, 191] for _ in range(4)
         ]
