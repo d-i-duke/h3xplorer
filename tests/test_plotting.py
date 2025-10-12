@@ -1,6 +1,9 @@
 """Tests for `h3xplorer` plotting."""
 
+import numpy as np
+import pandas as pd
 import pytest
+from numpy.testing import assert_array_equal
 
 from h3xplorer import plotting
 
@@ -65,7 +68,26 @@ class TestToPalette:
 
 
 class TestNormaliseValues:
-    pass
+    @pytest.fixture(scope="class")
+    def series(self):
+        return pd.Series([-5, 0, 5, 10])
+
+    def test_no_max_threshold_returns_expected(self, series):
+        assert_array_equal(
+            plotting.normalise_values_diverging(series), np.array([0.25, 0.5, 0.75, 1])
+        )
+
+    def test_int_max_threshold_returns_expected(self, series):
+        assert_array_equal(
+            plotting.normalise_values_diverging(series, 5), np.array([0, 0.5, 1, 1.5])
+        )
+
+    def test_negative_float_max_threshold_returns_expected(self, series):
+        # values converted so that 0 = -0.25, 1 = +0.25.
+        # this makes 10 = 0.5 + (0.5*4) = 2.5
+        assert_array_equal(
+            plotting.normalise_values_diverging(series, -2.5), np.array([-0.5, 0.5, 1.5, 2.5])
+        )
 
 
 class TestPlotPolygonData:

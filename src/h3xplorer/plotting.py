@@ -58,6 +58,7 @@ def normalise_values_diverging(
         data_values: A series of numerical values.
         max_threshold: A value to set max/min at in the new normalised set of values. This can
             make values in the return NDArray be below 0 / above 1.
+            If a max threshold is negative it will be made positive using `abs()`.
 
     Returns:
         A numpy NDArray of values between 0 and 1.
@@ -65,7 +66,7 @@ def normalise_values_diverging(
     if max_threshold is None:
         norm_values = data_values / max(abs(data_values.max()), abs(data_values.min()))
     else:
-        norm_values = data_values / max_threshold
+        norm_values = data_values / abs(max_threshold)
     norm_values = np.array([(value + 1) / 2 for value in norm_values])
     return norm_values
 
