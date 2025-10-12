@@ -6,7 +6,7 @@ import colorcet as cc
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from lonboard import Map, PolygonLayer, basemap
+from lonboard import PolygonLayer
 from lonboard.colormap import apply_continuous_cmap
 from numpy._typing import NDArray
 from palettable.palette import Palette
@@ -71,8 +71,10 @@ def normalise_values_diverging(
     return norm_values
 
 
-def plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formatting) -> Map:
-    """Creates a lonboard map plotting the given polygon data.
+def create_polygon_layer(
+    gdf: gpd.GeoDataFrame, value_col: str, **polygon_formatting
+) -> PolygonLayer:
+    """Creates a polygon layer for the given data.
 
     Args:
         gdf: Spatial dataset containing only polygons.
@@ -95,7 +97,4 @@ def plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formattin
         "get_line_color": line_colours,
     }
     polygon_formatting_to_apply = default_format | polygon_formatting
-
-    layer = PolygonLayer.from_geopandas(gdf, **polygon_formatting_to_apply)
-    m = Map([layer], basemap_style=basemap.CartoBasemap.DarkMatter)
-    return m
+    return PolygonLayer.from_geopandas(gdf, **polygon_formatting_to_apply)

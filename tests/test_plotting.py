@@ -90,5 +90,5 @@ class TestNormaliseValues:
         )
 
 
-class TestPlotPolygonData:
+class TestCreatePolygonLayer:
     pass

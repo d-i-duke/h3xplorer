@@ -6,6 +6,7 @@ from pathlib import Path
 import geopandas as gpd
 import h3.api.numpy_int as h3
 import polars as pl
+from lonboard import Map, basemap
 from tqdm import tqdm
 
 import h3xplorer.plotting
@@ -263,7 +264,8 @@ def xy_plot(
     aggregations = {ref_field: {"column": agg_field, "agg": agg_type}}
     df_agg = groupby_ref_col(df_hex_refs, ref_field="h3_ref", **aggregations)
     gdf = join_pldf_to_gdf(df_agg, hexes)
-    plot = h3xplorer.plotting.plot_polygon_data(gdf, ref_field)
+    layer = h3xplorer.plotting.create_polygon_layer(gdf, ref_field)
+    m = Map([layer], basemap_style=basemap.CartoBasemap.DarkMatter)
     if outpath is not None:
-        plot.to_html(outpath, title=outpath.stem)
-    return plot
+        m.to_html(outpath, title=outpath.stem)
+    return m
