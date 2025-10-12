@@ -278,8 +278,8 @@ def plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formattin
 
     palette = to_palette(cc.CET_CBD1)
     norm_values = normalise_values(gdf, value_col)
-    fill_colours = apply_continuous_cmap(norm_values, palette, alpha=0.5)
-    line_colours = apply_continuous_cmap(norm_values, palette, alpha=0.8)
+    fill_colours = apply_continuous_cmap(norm_values, palette, alpha=0.75)
+    line_colours = apply_continuous_cmap(norm_values, palette, alpha=0.9)
     default_format = {
         "get_line_width": 5,
         "line_width_min_pixels": 2,
@@ -292,3 +292,28 @@ def plot_polygon_data(gdf: gpd.GeoDataFrame, value_col: str, **polygon_formattin
     layer = PolygonLayer.from_geopandas(gdf, **polygon_formatting_to_apply)
     m = Map([layer], basemap_style=basemap.CartoBasemap.DarkMatter)
     return m
+
+
+def xy_plot(
+    data_file: Path | pl.DataFrame,
+    x_field: str,
+    y_field: str,
+    crs: int,
+    hex_size: int,
+    agg_field: str,
+    agg_type: str,
+    outpath: Path | None = None,
+):
+    """Plots an xy dataset as an HTML file."""
+    xys = import_dataset(data_file) if isinstance(data_file, Path) else data_file
+    latlons = read_xy_dataset(xys, x_field, y_field, crs)
+    df_hex_refs, hex_refs = get_hexagon_refs_for_points(latlons, hex_size)
+    hexes = get_hexagon_polygons(hex_refs)
+    ref_field = f"{agg_field}_{agg_type}"
+    aggregations = {ref_field: {"column": agg_field, "agg": agg_type}}
+    df_agg = groupby_ref_col(df_hex_refs, ref_field="h3_ref", **aggregations)
+    gdf = join_pldf_to_gdf(df_agg, hexes)
+    plot = plot_polygon_data(gdf, ref_field)
+    if outpath is not None:
+        plot.to_html(outpath, title=outpath.stem)
+    return plot
