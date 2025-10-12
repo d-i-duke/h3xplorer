@@ -253,9 +253,30 @@ def xy_plot(
     hex_size: int,
     agg_field: str,
     agg_type: str,
-    outpath: Path | None = None,
+    outfile: Path | None = None,
 ):
-    """Plots an xy dataset as a lonboard map and optionally outputs to html."""
+    """Plots an xy dataset as a lonboard map and optionally outputs to html.
+
+    Args:
+        data_file: path of the data file or polars dataframe containing the data.
+            must contain 'x' and 'y' fields.
+        x_field: the x (longitude) coordinates field.
+        y_field: the y (latitude) coordinates field.
+        crs: the coordinate reference system of the x and y coords.
+            e.g. `4326` for WGS84, `27700` for British National Grid
+        hex_size: The size of the `h3` hexagons to use.
+            0 is very big, approx. country-size, 122 cells total worldwide.
+            15 is very small, around 0.5m edges, 1m^2 area. approx. 570,000,000,000,000 worldwide.
+            recommended: 2 for country-regions (e.g. England),
+            4 for local regions (English counties), 6 for rural work (lsoa-ish),
+            7-8 for urban work, 10 for very local work (hectare).
+        agg_field: Column to use for data (colours).
+        agg_type: How to aggregate, will take any valid `polars` aggregation e.g. `sum`, `mean`
+        outfile: optional Path to an `.html` file location (can be new)
+
+    Returns:
+        lonboard map with the layer displayed.
+    """
     xys = import_dataset(data_file) if isinstance(data_file, Path) else data_file
     latlons = read_xy_dataset(xys, x_field, y_field, crs)
     df_hex_refs, hex_refs = get_hexagon_refs_for_points(latlons, hex_size)
@@ -266,6 +287,8 @@ def xy_plot(
     gdf = join_pldf_to_gdf(df_agg, hexes)
     layer = h3xplorer.plotting.create_polygon_layer(gdf, ref_field)
     m = Map([layer], basemap_style=basemap.CartoBasemap.DarkMatter)
-    if outpath is not None:
-        m.to_html(outpath, title=outpath.stem)
+    if outfile is not None:
+        if not outfile.parent.exists():
+            outfile.parent.mkdir()
+        m.to_html(outfile, title=outfile.stem)
     return m
