@@ -255,7 +255,7 @@ def xy_plot(
     agg_type: str,
     outpath: Path | None = None,
 ):
-    """Plots an xy dataset as an HTML file."""
+    """Plots an xy dataset as a lonboard map and optionally outputs to html."""
     xys = import_dataset(data_file) if isinstance(data_file, Path) else data_file
     latlons = read_xy_dataset(xys, x_field, y_field, crs)
     df_hex_refs, hex_refs = get_hexagon_refs_for_points(latlons, hex_size)
