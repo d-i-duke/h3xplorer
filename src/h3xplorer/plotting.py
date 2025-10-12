@@ -33,8 +33,15 @@ def to_rgb(hex: str) -> list[int]:
     return list(int(h[i : i + 2], 16) for i in (0, 2, 4))
 
 
-def to_palette(cmap) -> Palette:
-    """Returns the ColorCet colormap as a palettable Palette."""
+def to_palette(cmap: list[str]) -> Palette:
+    """Returns the ColorCet colormap as a palettable Palette.
+
+    Args:
+        cmap: list of hex-format color values in order. can be generated with colorcet or similar.
+
+    Returns:
+        Palettable Palette object using the given colour map information.
+    """
     colors = [to_rgb(item) for item in cmap]
     return Palette(name="colorcet", map_type="colorcet", colors=colors)
 
