@@ -254,7 +254,7 @@ def xy_plot(
     agg_field: str,
     agg_type: str,
     outfile: Path | None = None,
-):
+) -> Map:
     """Plots an xy dataset as a lonboard map and optionally outputs to html.
 
     Args:
@@ -267,11 +267,14 @@ def xy_plot(
         hex_size: The size of the `h3` hexagons to use.
             0 is very big, approx. country-size, 122 cells total worldwide.
             15 is very small, around 0.5m edges, 1m^2 area. approx. 570,000,000,000,000 worldwide.
-            recommended: 2 for country-regions (e.g. England),
-            4 for local regions (English counties), 6 for rural work (lsoa-ish),
-            7-8 for urban work, 10 for very local work (hectare).
+            recommended:
+            - 2 for country-regions (e.g. England),
+            - 4 for local regions (English counties),
+            - 6 for rural work (lsoa-ish),
+            - 7-8 for urban work,
+            - 10 for very local work (hectare).
         agg_field: Column to use for data (colours).
-        agg_type: How to aggregate, will take any valid `polars` aggregation e.g. `sum`, `mean`
+        agg_type: How to aggregate, will take any valid `polars` agg string e.g. `sum`, `mean`
         outfile: optional Path to an `.html` file location (can be new)
 
     Returns:
