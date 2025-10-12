@@ -27,13 +27,13 @@ class TestToRGB:
             plotting.to_rgb("#ffgfff")
 
     def test_hex_string_without_hash_converts_as_expected(self):
-        rgb = plotting.to_rgb("ff2a00")
-        expected = [255, 42, 0]
+        rgb = plotting.to_rgb("ffaa00")
+        expected = [255, 170, 0]
         assert rgb == expected
 
     def test_hex_string_converts_as_expected(self):
-        rgb = plotting.to_rgb("#ff2a00")
-        expected = [255, 42, 0]
+        rgb = plotting.to_rgb("#ffaa00")
+        expected = [255, 170, 0]
         assert rgb == expected
 
 
