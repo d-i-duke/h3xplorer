@@ -1,4 +1,4 @@
-"""Tests for `h3xplorer` plotting."""
+"""Tests for `h3xplorer` mapping."""
 
 import geopandas as gpd
 import numpy as np
@@ -8,7 +8,7 @@ from lonboard import PolygonLayer
 from numpy.testing import assert_array_equal
 from shapely import Polygon
 
-from h3xplorer import plotting
+from h3xplorer import mapping
 
 
 @pytest.fixture(scope="module")
@@ -24,31 +24,31 @@ def data_series(data_list):
 class TestToRGB:
     def test_hex_string_too_short_without_hash_raises_error(self):
         with pytest.raises(ValueError, match="Hex string must be 6 active characters*"):
-            plotting.to_rgb("fffff")
+            mapping.to_rgb("fffff")
 
     def test_hex_string_too_short_with_hash_raises_error(self):
         with pytest.raises(ValueError, match="Hex string must be 6 active characters*"):
-            plotting.to_rgb("#fffff")
+            mapping.to_rgb("#fffff")
 
     def test_hex_string_too_long_without_hash_raises_error(self):
         with pytest.raises(ValueError, match="Hex string must be 6 active characters*"):
-            plotting.to_rgb("fffffff")
+            mapping.to_rgb("fffffff")
 
     def test_hex_string_too_long_with_hash_raises_error(self):
         with pytest.raises(ValueError, match="Hex string must be 6 active characters*"):
-            plotting.to_rgb("ffffffff")
+            mapping.to_rgb("ffffffff")
 
     def test_hex_string_with_non_hex_chars_raises_error(self):
         with pytest.raises(ValueError, match="Hex string must only include 0-9 and a-f characters"):
-            plotting.to_rgb("#ffgfff")
+            mapping.to_rgb("#ffgfff")
 
     def test_hex_string_without_hash_converts_as_expected(self):
-        rgb = plotting.to_rgb("ffaa00")
+        rgb = mapping.to_rgb("ffaa00")
         expected = [255, 170, 0]
         assert rgb == expected
 
     def test_hex_string_converts_as_expected(self):
-        rgb = plotting.to_rgb("#ffaa00")
+        rgb = mapping.to_rgb("#ffaa00")
         expected = [255, 170, 0]
         assert rgb == expected
 
@@ -63,39 +63,39 @@ class TestToPalette:
         return "colorcet"
 
     def test_typical_cmap_creates_expected_name(self, cmap_hex, name):
-        result = plotting.colorcet_to_palette(cmap_hex)
+        result = mapping.colorcet_to_palette(cmap_hex)
         assert result.name == name
 
     def test_typical_cmap_creates_expected_maptype(self, cmap_hex, name):
-        result = plotting.colorcet_to_palette(cmap_hex)
+        result = mapping.colorcet_to_palette(cmap_hex)
         assert result.type == name
 
     def test_typical_cmap_creates_expected_hex_colors(self, cmap_hex):
-        result = plotting.colorcet_to_palette(cmap_hex)
+        result = mapping.colorcet_to_palette(cmap_hex)
         assert result.hex_colors == cmap_hex
 
     def test_typical_cmap_creates_expected_mpl_colors(self, cmap_hex):
         cmap_rgb = [(0, 0, 0), (1, 1, 1)]
-        result = plotting.colorcet_to_palette(cmap_hex)
+        result = mapping.colorcet_to_palette(cmap_hex)
         assert result.mpl_colors == cmap_rgb
 
 
 class TestNormaliseValues:
     def test_no_max_threshold_returns_expected(self, data_series):
         assert_array_equal(
-            plotting.normalise_values_diverging(data_series), np.array([0.25, 0.5, 0.75, 1])
+            mapping.normalise_values_diverging(data_series), np.array([0.25, 0.5, 0.75, 1])
         )
 
     def test_int_max_threshold_returns_expected(self, data_series):
         assert_array_equal(
-            plotting.normalise_values_diverging(data_series, 5), np.array([0, 0.5, 1, 1.5])
+            mapping.normalise_values_diverging(data_series, 5), np.array([0, 0.5, 1, 1.5])
         )
 
     def test_negative_float_max_threshold_returns_expected(self, data_series):
         # values converted so that 0 = -0.25, 1 = +0.25.
         # this makes 10 = 0.5 + (0.5*4) = 2.5
         assert_array_equal(
-            plotting.normalise_values_diverging(data_series, -2.5), np.array([-0.5, 0.5, 1.5, 2.5])
+            mapping.normalise_values_diverging(data_series, -2.5), np.array([-0.5, 0.5, 1.5, 2.5])
         )
 
 
@@ -121,7 +121,7 @@ class TestCreatePolygonLayer:
 
     @pytest.fixture(scope="class")
     def default_layer(self, gdf):
-        return plotting.create_polygon_layer(gdf, "data")
+        return mapping.create_polygon_layer(gdf, "data")
 
     @pytest.fixture(scope="class")
     def default_fill_colors(self):
@@ -177,18 +177,18 @@ class TestCreatePolygonLayer:
         self, gdf, default_fill_colors, default_line_colors
     ):
         test_num = 100
-        layer = plotting.create_polygon_layer(gdf, "data", get_line_width=test_num)
+        layer = mapping.create_polygon_layer(gdf, "data", get_line_width=test_num)
         assert layer.get_line_width == test_num
         assert layer.line_width_min_pixels == 2
         assert layer.line_width_max_pixels == 5
         assert [layer.get_fill_color[num].as_py() for num in range(4)] == default_fill_colors
         assert [layer.get_line_color[num].as_py() for num in range(4)] == default_line_colors
 
-    def test_custom_new_formatting_creates_addiitonal_formatting(
+    def test_custom_new_formatting_creates_additional_formatting(
         self, gdf, default_fill_colors, default_line_colors
     ):
         test_settings = {"get_elevation": np.array([1, 1, 10, 20]), "extruded": True}
-        layer = plotting.create_polygon_layer(gdf, "data", **test_settings)
+        layer = mapping.create_polygon_layer(gdf, "data", **test_settings)
         assert layer.get_line_width == 5
         assert layer.line_width_min_pixels == 2
         assert layer.line_width_max_pixels == 5
@@ -198,7 +198,7 @@ class TestCreatePolygonLayer:
         assert layer.extruded == test_settings["extruded"]
 
     def test_max_threshold_creates_expected_fill_colors(self, gdf):
-        layer = plotting.create_polygon_layer(gdf, "data", max_threshold=20)
+        layer = mapping.create_polygon_layer(gdf, "data", max_threshold=20)
         assert [layer.get_fill_color[num].as_py() for num in range(4)] == [
             [206, 215, 244, 191],
             [237, 236, 236, 191],
@@ -207,7 +207,7 @@ class TestCreatePolygonLayer:
         ]
 
     def test_custom_cmap_creates_expected_colors(self, gdf):
-        layer = plotting.create_polygon_layer(gdf, "data", cmap=["#ffffff", "#ffffff"])
+        layer = mapping.create_polygon_layer(gdf, "data", cmap=["#ffffff", "#ffffff"])
         assert [layer.get_fill_color[num].as_py() for num in range(4)] == [
             [255, 255, 255, 191] for _ in range(4)
         ]

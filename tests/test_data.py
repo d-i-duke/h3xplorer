@@ -1,0 +1,279 @@
+"""Tests for `h3xplorer` data."""
+
+import geopandas as gpd
+import polars as pl
+import pytest
+from geopandas.testing import assert_geodataframe_equal
+from polars.testing import assert_frame_equal, assert_series_equal
+from shapely import Polygon
+
+from h3xplorer.data import (
+    get_hexagon_polygons,
+    get_hexagon_refs_for_points,
+    groupby_ref_col,
+    join_pldf_to_gdf,
+)
+
+
+@pytest.fixture(scope="module")
+def latlon_dataset() -> pl.DataFrame:
+    # verified co-ords using qgis to transform those in the xy_dataset (epsg 27700 -> 4326)
+    return pl.DataFrame({
+        "id": [1, 2, 3, 4, 5],
+        "lon": [-3.448079, -3.448079, -0.494362, -0.128329, -2.001375],
+        "lat": [51.689821, 51.689821, 53.487243, 51.503992, 51.249166],
+    })
+
+
+@pytest.fixture(scope="module")
+def expected_refs() -> set:
+    return {599424788162674687, 599423139968974847, 599423697240981503, 599424725885648895}
+
+
+@pytest.fixture(scope="module")
+def expected_refs_list_dupes() -> list:
+    return [
+        599424788162674687,
+        599424788162674687,
+        599423139968974847,
+        599423697240981503,
+        599424725885648895,
+    ]
+
+
+@pytest.fixture(scope="module")
+def expected_refs_list_nodupes() -> list:
+    return [599424788162674687, 599423139968974847, 599423697240981503, 599424725885648895]
+
+
+@pytest.fixture(scope="module")
+def expected_geoms():
+    return [
+        Polygon([
+            (-3.3757093714879454, 51.69820007993203),
+            (-3.5053436422835813, 51.73272257423428),
+            (-3.6080164502927823, 51.6811903909734),
+            (-3.580861649240846, 51.59519769482759),
+            (-3.451418266847575, 51.5607699427712),
+            (-3.3489389047352387, 51.61224032577989),
+            (-3.3757093714879454, 51.69820007993203),
+        ]),
+        Polygon([
+            (-0.6808060214522392, 53.45049792645889),
+            (-0.5518632906529836, 53.413041720925044),
+            (-0.4457610158490708, 53.45976141351786),
+            (-0.4683625808633735, 53.54398956917154),
+            (-0.5974718902105141, 53.581541219542665),
+            (-0.7038130846587468, 53.534769084214794),
+            (-0.6808060214522392, 53.45049792645889),
+        ]),
+        Polygon([
+            (0.0542718130165512, 51.506311654843635),
+            (-0.0692940978798558, 51.54399608943081),
+            (-0.1717985446099623, 51.49597969639887),
+            (-0.1505100096980458, 51.41032812299651),
+            (-0.0270925498115125, 51.37274254089537),
+            (0.0751848748771522, 51.42070984556818),
+            (0.0542718130165512, 51.506311654843635),
+        ]),
+        Polygon([
+            (-1.968314509613917, 51.31068650532574),
+            (-2.0703877633842658, 51.26042861171404),
+            (-2.0460074072834455, 51.174313502519816),
+            (-1.9199305507519617, 51.13849732928368),
+            (-1.8180641211005693, 51.1886990552312),
+            (-1.8420676885992824, 51.27477294931256),
+            (-1.968314509613917, 51.31068650532574),
+        ]),
+    ]
+
+
+@pytest.fixture(scope="module")
+def expected_polys(expected_refs_list_nodupes, expected_geoms):
+    return gpd.GeoDataFrame(
+        {"h3_ref": expected_refs_list_nodupes}, geometry=expected_geoms, crs="EPSG:4326"
+    )
+
+
+class TestHexagonRefsForPoints:
+    def test_points_generate_expected_size5_hexagons_in_df(
+        self, latlon_dataset, expected_refs_list_dupes
+    ):
+        expected_series = pl.Series(name="h3_ref", values=expected_refs_list_dupes)
+        dataset, _ = get_hexagon_refs_for_points(latlon_dataset, 5)
+        assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
+
+    def test_input_df_retains_data(self, latlon_dataset):
+        dataset, _ = get_hexagon_refs_for_points(latlon_dataset, 5)
+        assert_frame_equal(dataset.drop("h3_ref"), latlon_dataset, check_row_order=False)
+
+    def test_points_generate_expected_size5_hexagon_ref_set(self, latlon_dataset, expected_refs):
+        _, hex_refs = get_hexagon_refs_for_points(latlon_dataset, 5)
+        assert hex_refs == expected_refs
+
+    def test_empty_data_generates_empty_set(self):
+        expected = set()
+        _, hex_refs = get_hexagon_refs_for_points(pl.DataFrame({"lat": [], "lon": []}), 5)
+        assert hex_refs == expected
+
+    def test_empty_data_generates_empty_df(self):
+        expected_series = pl.Series(name="h3_ref")
+        dataset, _ = get_hexagon_refs_for_points(pl.DataFrame({"lat": [], "lon": []}), 5)
+        assert_series_equal(dataset.select("h3_ref").to_series(), expected_series)
+
+
+class TestGetHexagonPolygons:
+    def test_empty_refs_set_generates_empty_df(self):
+        assert_geodataframe_equal(
+            get_hexagon_polygons(set()),
+            gpd.GeoDataFrame({"h3_ref": []}, geometry=[], crs="EPSG:4326"),
+        )
+
+    def test_empty_refs_list_generates_empty_df(self):
+        assert_geodataframe_equal(
+            get_hexagon_polygons(list()),
+            gpd.GeoDataFrame({"h3_ref": []}, geometry=[], crs="EPSG:4326"),
+        )
+
+    def test_expected_refs_generates_expected_geometries(
+        self, expected_refs_list_nodupes, expected_polys
+    ):
+        assert_geodataframe_equal(
+            get_hexagon_polygons(expected_refs_list_nodupes),
+            expected_polys,
+            check_less_precise=True,
+        )
+
+
+class TestGroupbyRefCol:
+    @pytest.fixture(scope="class")
+    def refs_for_grouping(self, expected_refs_list_nodupes):
+        return [
+            expected_refs_list_nodupes[0],
+            expected_refs_list_nodupes[0],
+            expected_refs_list_nodupes[1],
+            expected_refs_list_nodupes[1],
+            expected_refs_list_nodupes[1],
+        ]
+
+    @pytest.fixture(scope="class")
+    def df_for_grouping(self, refs_for_grouping) -> pl.DataFrame:
+        dummy_pop = pl.Series("population", [100, 200, 250, 250, 400])
+        h3_ref = pl.Series("h3_ref", refs_for_grouping)
+        return pl.DataFrame([h3_ref, dummy_pop])
+
+    @pytest.fixture(scope="class")
+    def expected_refs_grouped(self, expected_refs_list_nodupes):
+        return [expected_refs_list_nodupes[0], expected_refs_list_nodupes[1]]
+
+    @pytest.fixture(scope="class")
+    def expected_pops_summed(self):
+        return [300, 900]
+
+    @pytest.fixture(scope="class")
+    def expected_pops_mean(self):
+        return [150, 300]
+
+    @pytest.fixture(scope="class")
+    def expected_pops_median(self):
+        return [150, 250]
+
+    def test_empty_input_gives_empty_output(self):
+        assert_frame_equal(
+            groupby_ref_col(pl.DataFrame({"h3_ref": []})), pl.DataFrame({"h3_ref": []})
+        )
+
+    def test_wrong_ref_column_raises_error(self, df_for_grouping: pl.DataFrame):
+        with pytest.raises(ValueError, match="ref_field*"):
+            groupby_ref_col(df_for_grouping, "wrong")
+
+    def test_missing_aggregation_column_raises_error(self, df_for_grouping: pl.DataFrame):
+        with pytest.raises(
+            ValueError, match="some of the aggregations column names are missing from the input_df*"
+        ):
+            groupby_ref_col(df_for_grouping, temp={"column": "wrong", "agg": "sum"})
+
+    def test_duplicate_aggregation_column_target_raises_error(self, df_for_grouping: pl.DataFrame):
+        with pytest.raises(
+            ValueError,
+            match="some of the target aggregations column names are duplicates from input_df*",
+        ):
+            groupby_ref_col(df_for_grouping, h3_ref={"column": "population", "agg": "sum"})
+
+    def test_no_aggregation_creates_expected_result(self, df_for_grouping, expected_refs_grouped):
+        expected = pl.DataFrame({"h3_ref": expected_refs_grouped})
+        assert_frame_equal(groupby_ref_col(df_for_grouping), expected, check_row_order=False)
+
+    def test_simple_aggregation_creates_expected_result(
+        self, df_for_grouping, expected_refs_grouped, expected_pops_summed
+    ):
+        expected = pl.DataFrame({
+            "h3_ref": expected_refs_grouped,
+            "population_sum": expected_pops_summed,
+        })
+        assert_frame_equal(
+            groupby_ref_col(df_for_grouping, population_sum={"column": "population", "agg": "sum"}),
+            expected,
+            check_row_order=False,
+        )
+
+    def test_many_aggregations_creates_expected_result(
+        self,
+        df_for_grouping,
+        expected_refs_grouped,
+        expected_pops_summed,
+        expected_pops_mean,
+        expected_pops_median,
+    ):
+        expected = pl.DataFrame({
+            "h3_ref": expected_refs_grouped,
+            "population_sum": expected_pops_summed,
+            "population_mean": expected_pops_mean,
+            "population_median": expected_pops_median,
+        })
+        assert_frame_equal(
+            groupby_ref_col(
+                df_for_grouping,
+                population_sum={"column": "population", "agg": "sum"},
+                population_mean={"column": "population", "agg": "mean"},
+                population_median={"column": "population", "agg": "median"},
+            ),
+            expected,
+            check_row_order=False,
+            check_dtypes=False,
+        )
+
+
+class TestJoinPldfToGdf:
+    @pytest.fixture(scope="class")
+    def joinable_dataset(self, expected_refs_list_nodupes):
+        return pl.DataFrame({"h3_ref": expected_refs_list_nodupes, "joinfield": [2, 6, 8, 10]})
+
+    @pytest.fixture(scope="class")
+    def joined_gdf(self, expected_geoms, expected_refs_list_nodupes):
+        return gpd.GeoDataFrame(
+            {"h3_ref": expected_refs_list_nodupes, "joinfield": [2, 6, 8, 10]},
+            geometry=expected_geoms,
+            crs="EPSG:4326",
+        ).set_index("h3_ref")
+
+    def test_df_missing_ref_col_raises_error(self, latlon_dataset, expected_polys):
+        with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
+            join_pldf_to_gdf(latlon_dataset, expected_polys, "h3_ref")
+
+    def test_gdf_missing_ref_col_raises_error(self, latlon_dataset, expected_geoms):
+        gdf = gpd.GeoDataFrame(geometry=expected_geoms, crs="EPSG:4326")
+        with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
+            join_pldf_to_gdf(latlon_dataset, gdf, "id")
+
+    def test_df_and_gdf_missing_ref_col_raises_error(self, latlon_dataset, expected_polys):
+        with pytest.raises(ValueError, match="ref_col missing in df and/or gdf"):
+            join_pldf_to_gdf(latlon_dataset, expected_polys, "blah")
+
+    def test_join_data_creates_expected_result(self, joinable_dataset, expected_polys, joined_gdf):
+        assert_geodataframe_equal(
+            join_pldf_to_gdf(joinable_dataset, expected_polys),
+            joined_gdf,
+            check_like=True,
+            check_less_precise=True,
+        )
