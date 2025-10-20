@@ -31,6 +31,7 @@ def xy_plot(
     agg_field: str,
     agg_type: str,
     outfile: Path | None = None,
+    **layer_properties,
 ) -> Map:
     """Plots an xy dataset as a lonboard map and optionally outputs to html.
 
@@ -53,6 +54,7 @@ def xy_plot(
         agg_field: Column to use for data (colours).
         agg_type: How to aggregate, will take any valid `polars` agg string e.g. `sum`, `mean`
         outfile: optional Path to an `.html` file location (can be new)
+        layer_properties: additional keyword arguments to give to the layer being created.
 
     Returns:
         lonboard map with the layer displayed.
@@ -65,8 +67,8 @@ def xy_plot(
     aggregations = {ref_field: {"column": agg_field, "agg": agg_type}}
     df_agg = groupby_ref_col(df_hex_refs, ref_field="h3_ref", **aggregations)
     gdf = join_pldf_to_gdf(df_agg, hexes)
-    layer = create_polygon_layer(gdf, ref_field)
-    m: Map = Map([layer], basemap_style=basemap.CartoBasemap.DarkMatter)
+    layer = create_polygon_layer(gdf, ref_field, **layer_properties)
+    m: Map = Map([layer], basemap_style=basemap.CartoBasemap.DarkMatter, show_tooltip=True)
     if outfile is not None:
         if not outfile.parent.exists():
             outfile.parent.mkdir()
